@@ -71,11 +71,11 @@ You can install all dependencies natively using Ubuntu's package manager (`apt`)
 ```bash
 # 1. Install system bioinformatics tools via apt
 sudo apt-get update
-sudo apt-get install -y ncbi-blast+ prokka prodigal diamond-aligner bamtools python3-pip python3-venv
+sudo apt-get install -y ncbi-blast+ prokka prodigal diamond-aligner bamtools
 
-# 2. Create and activate a virtual environment
-python3 -m venv sanbac
-source sanbac/bin/activate
+# 2. Create and activate a permanent Conda environment
+conda create -n sanbac python=3.9 -y
+conda activate sanbac
 
 # 3. Install RGI (CARD) and SanBac
 cd ~/SanBac
