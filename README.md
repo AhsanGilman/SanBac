@@ -63,6 +63,12 @@ With the conda environment active, install the CLI:
 pip install -e .
 ```
 
+*Note: If you receive a `sanbac: command not found` error after installation, your system path is missing Python's binary directory. You can easily fix this by adding a command alias to your shell config:*
+```bash
+echo "alias sanbac='python -m sanbac.main'" >> ~/.bashrc
+source ~/.bashrc
+```
+
 ### 🚨 Ubuntu / ARM64 (aarch64) Native Installation
 If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`. 
 
@@ -82,6 +88,10 @@ cd ~/SanBac
 pip install --upgrade pip setuptools
 pip install git+https://github.com/arpcard/rgi.git
 pip install -e .
+
+# 4. Map the command alias if system PATH is missing python binaries
+echo "alias sanbac='python -m sanbac.main'" >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ---
