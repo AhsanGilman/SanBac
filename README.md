@@ -79,8 +79,8 @@ You can install all dependencies natively using Ubuntu's package manager (`apt`)
 sudo apt-get update
 sudo apt-get install -y ncbi-blast+ prokka prodigal diamond-aligner bamtools
 
-# 2. Create and activate a permanent Conda environment
-conda create -n sanbac python=3.9 -y
+# 2. Create and activate a permanent Conda environment (make sure to include 'pip' so that it doesn't default to system-wide pip and trigger externally-managed-environment errors)
+conda create -n sanbac python=3.9 pip -y
 conda activate sanbac
 
 # 3. Install RGI (CARD) and SanBac
