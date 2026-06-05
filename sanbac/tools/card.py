@@ -157,19 +157,33 @@ class CardTool(BaseTool):
                 pass
 
             txt_output = Path(f"{output_prefix}.txt")
+            json_output = Path(f"{output_prefix}.json")
+            csv_output = Path(f"{output_prefix}.csv")
+
             if txt_output.exists():
                 # Convert TXT to CSV using pandas
                 try:
                     import pandas as pd
-                    csv_output = Path(f"{output_prefix}.csv")
                     df = pd.read_csv(txt_output, sep="\t")
                     df.to_csv(csv_output, index=False)
                     print(f"[{self.name.upper()}] CSV file saved at: {csv_output}")
-                    return csv_output
                 except Exception as e:
                     print(f"[{self.name.upper()}] Error converting TXT to CSV: {e}")
-                    return txt_output
-            return output_dir
+                
+                # Delete txt output
+                try:
+                    txt_output.unlink()
+                except Exception:
+                    pass
+
+            if json_output.exists():
+                # Delete json output
+                try:
+                    json_output.unlink()
+                except Exception:
+                    pass
+
+            return csv_output
         except subprocess.CalledProcessError as e:
             # Try to clean up local link on failure as well
             try:

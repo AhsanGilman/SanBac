@@ -128,11 +128,11 @@ Results are structured cleanly by tool:
 ```
 results/
 ├── card/
-│   ├── sample1.txt       # CARD detailed tabular outputs
-│   └── sample2.txt
+│   ├── sample1.csv       # CARD antibiotic resistance gene report (CSV only)
+│   └── sample2.csv
 ├── vfdb/
-│   ├── sample1_vfdb_blast.tsv  # Outfmt-6 BLAST report against VFDB
-│   └── sample2_vfdb_blast.tsv
+│   ├── sample1.txt       # Virulence gene summary report (TXT only)
+│   └── sample2.txt
 └── prokka/
     ├── sample1/          # Full Prokka annotation folder
     │   ├── sample1.gff

@@ -97,7 +97,6 @@ class VfdbTool(BaseTool):
                 raise RuntimeError("Could not find or build VFDB database.")
 
         raw_output_file = output_dir / f"{input_file.stem}_results_virulence_detailed_raw.tmp"
-        final_output_file = output_dir / f"{input_file.stem}_virulence_hits_strict.txt"
         blastn_cmd = config.get_executable("blastn")
         
         # Run BLASTn with custom 15-column format
@@ -152,12 +151,8 @@ class VfdbTool(BaseTool):
                 # Delete temporary raw file
                 raw_output_file.unlink()
             
-            # Write final tab-separated hits file
-            with open(final_output_file, "w") as outfile:
-                outfile.write("\n".join(filtered_lines) + "\n")
-                
             # Create the gene summary (cut -f2 | sort | uniq -c | sort -nr)
-            summary_output_file = output_dir / f"{input_file.stem}_virulence_gene_summary_strict.txt"
+            summary_output_file = output_dir / f"{input_file.stem}.txt"
             from collections import Counter
             sseqid_counts = Counter()
             
@@ -176,9 +171,8 @@ class VfdbTool(BaseTool):
                 for sseqid, count in sorted_counts:
                     sum_file.write(f"{count:>7} {sseqid}\n")
                     
-            print(f"[{self.name.upper()}] Strict hits saved at: {final_output_file}")
-            print(f"[{self.name.upper()}] Gene summary saved at: {summary_output_file}")
-            return final_output_file
+            print(f"[{self.name.upper()}] Virulence summary saved at: {summary_output_file}")
+            return summary_output_file
             
         except subprocess.CalledProcessError as e:
             if raw_output_file.exists():
