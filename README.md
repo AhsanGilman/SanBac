@@ -46,14 +46,14 @@ To ensure fast and clean package resolution, we recommend setting Conda's channe
 conda config --set channel_priority strict
 
 # Create the environment using the local file
-conda env create -f conda_env.yml
-conda activate sanbac_env
+conda env create -f sanbac.yml
+conda activate sanbac
 ```
 
 *(Alternative: You can create the environment directly from GitHub without cloning first)*:
 ```bash
-conda env create -f https://raw.githubusercontent.com/AhsanGilman/SanBac/main/conda_env.yml
-conda activate sanbac_env
+conda env create -f https://raw.githubusercontent.com/AhsanGilman/SanBac/main/sanbac.yml
+conda activate sanbac
 ```
 
 ### 3. Install SanBac CLI
@@ -74,8 +74,8 @@ sudo apt-get update
 sudo apt-get install -y ncbi-blast+ prokka prodigal diamond-aligner bamtools python3-pip python3-venv
 
 # 2. Create and activate a virtual environment
-python3 -m venv sanbac_env
-source sanbac_env/bin/activate
+python3 -m venv sanbac
+source sanbac/bin/activate
 
 # 3. Install RGI (CARD) and SanBac
 cd ~/SanBac

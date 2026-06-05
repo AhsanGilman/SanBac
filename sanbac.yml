@@ -1,4 +1,4 @@
-name: sanbac_env
+name: sanbac
 channels:
   - conda-forge
   - bioconda
