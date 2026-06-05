@@ -60,7 +60,7 @@ conda activate sanbac
 With the conda environment active, install the CLI:
 
 ```bash
-pip install -e .
+python -m pip install -e .
 ```
 
 *Note: If you receive a `sanbac: command not found` error after installation, your system path is missing Python's binary directory. You can easily fix this by adding a command alias to your shell config:*
@@ -70,24 +70,30 @@ source ~/.bashrc
 ```
 
 ### 🚨 Ubuntu / ARM64 (aarch64) Native Installation
-If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`. 
+If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`.
 
-You can install all dependencies natively using Ubuntu's package manager (`apt`) and Python's `pip` in seconds:
+#### Clean Re-creation (If you previously ran into `externally-managed-environment` errors)
+If you already created a partial `sanbac` environment, remove it first to start clean:
+```bash
+conda deactivate
+conda env remove -n sanbac -y
+```
 
+#### Step-by-Step Installation:
 ```bash
 # 1. Install system bioinformatics tools via apt
 sudo apt-get update
 sudo apt-get install -y ncbi-blast+ prokka prodigal diamond-aligner bamtools
 
-# 2. Create and activate a permanent Conda environment (make sure to include 'pip' so that it doesn't default to system-wide pip and trigger externally-managed-environment errors)
+# 2. Create and activate a permanent Conda environment with python 3.9 and pip installed inside it
 conda create -n sanbac python=3.9 pip -y
 conda activate sanbac
 
-# 3. Install RGI (CARD) and SanBac
+# 3. Install RGI (CARD) and SanBac using python's module invocation to bypass any shell path caching
 cd ~/SanBac
-pip install --upgrade pip setuptools
-pip install git+https://github.com/arpcard/rgi.git
-pip install -e .
+python -m pip install --upgrade pip setuptools
+python -m pip install git+https://github.com/arpcard/rgi.git
+python -m pip install -e .
 
 # 4. Map the command alias if system PATH is missing python binaries
 echo "alias sanbac='python -m sanbac.main'" >> ~/.bashrc
