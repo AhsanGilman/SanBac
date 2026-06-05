@@ -32,7 +32,7 @@ To make installation simple, follow these steps in order:
 Clone the repository to your machine and move into the project folder:
 
 ```bash
-git clone https://github.com/GilmanAutomation/SanBac.git
+git clone https://github.com/AhsanGilman/SanBac.git
 cd SanBac
 ```
 
@@ -52,7 +52,7 @@ conda activate sanbac_env
 
 *(Alternative: You can create the environment directly from GitHub without cloning first)*:
 ```bash
-conda env create -f https://raw.githubusercontent.com/GilmanAutomation/SanBac/main/conda_env.yml
+conda env create -f https://raw.githubusercontent.com/AhsanGilman/SanBac/main/conda_env.yml
 conda activate sanbac_env
 ```
 

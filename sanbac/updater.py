@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from .tools import load_tools
 
-DEFAULT_REPO = "https://github.com/GilmanAutomation/SanBac.git"
+DEFAULT_REPO = "https://github.com/AhsanGilman/SanBac.git"
 
 def update_databases(tool_name: str = None) -> bool:
     """Runs the database update function for all or specific tools."""
