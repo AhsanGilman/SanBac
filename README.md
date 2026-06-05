@@ -77,6 +77,7 @@ conda create -n sanbac python=3.9 pip -y
 conda activate sanbac
 
 # 3. Install RGI (CARD) and SanBac using python's module invocation to bypass any shell path caching
+git clone https://github.com/AhsanGilman/SanBac.git
 cd ~/SanBac
 python -m pip install --upgrade pip setuptools
 python -m pip install git+https://github.com/arpcard/rgi.git
