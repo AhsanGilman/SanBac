@@ -113,12 +113,44 @@ To run the full suite on a folder containing `.fasta` or `.fna` files:
 sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8
 ```
 
-#### CLI Options:
-*   `-i, --input-dir`: **(Required)** Folder containing FASTA genome assembly files.
-*   `-o, --output-dir`: **(Required)** Output directory where subdirectories for each tool will be created.
-*   `-t, --threads`: **(Default: 4)** Total CPU cores to allocate.
-*   `--tools`: Comma-separated list of tools to run (e.g. `--tools card,prokka,parsnp`). If omitted, all tools run sequentially.
-*   `--reference-parsnp`: Path to a reference FASTA/FNA genome file. If provided, the **Parsnp** phylogenetic tool is run to align all query genomes in the input folder against this reference.
+#### Full CLI Usage Reference:
+```
+Usage: sanbac [OPTIONS] COMMAND [ARGS]...
+
+  SanBac: A modular, multithreaded bacterial genomics analysis pipeline.
+  Orchestrates CARD, VFDB, Prokka, and other plugins sequentially.
+
+Options:
+  --version                   Show the version and exit.
+  --help                      Show this message and exit.
+
+Commands:
+  run                         Scan the input folder for FASTA files and run tools.
+  list-tools                  List all registered and available tool plugins.
+  update-db                   Download or update databases used by the analysis tools.
+  update-tool                 Self-update the SanBac tool code to the latest version.
+  config                      View or modify configuration parameters.
+
+COMMAND OPTIONS
+
+  run Options:
+    -i, --input-dir DIRECTORY Path to the import folder containing FNA/FASTA files. [Required]
+    -o, --output-dir DIRECTORY Path to the output folder where analysis results will be saved. [Required]
+    -t, --threads INTEGER     Total threads/CPU cores to allocate to the run. [Default: 4]
+    --tools TEXT              Comma-separated list of tools to run (e.g. 'card,prokka,parsnp,mashtree').
+    --reference-parsnp FILE   Path to the reference FASTA/FNA file for Parsnp.
+
+  config Options:
+    --db-dir DIRECTORY        Change database storage folder.
+    --exec-name TEXT          Specify executable name to override (e.g. 'rgi', 'blastn').
+    --exec-path TEXT          Path to the specified executable.
+
+  update-db Options:
+    --tool TEXT               Specify a single tool database to update (e.g., 'card' or 'vfdb').
+
+  update-tool Options:
+    --repo TEXT               Custom GitHub repository URL to pull updates from.
+```
 
 ---
 
