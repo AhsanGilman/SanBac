@@ -35,24 +35,51 @@ def update_databases(tool_name: str = None) -> bool:
 
 def update_external_binaries() -> bool:
     """Attempts to update external binaries like parsnp and mashtree via conda."""
-    import shutil
-    conda_path = shutil.which("conda")
+    conda_path = os.environ.get("CONDA_EXE")
+    
+    if not conda_path or not Path(conda_path).exists():
+        import shutil
+        conda_path = shutil.which("conda")
+        
     if not conda_path:
-        print("Conda not found on system path. Skipping external binary updates.")
+        # Check common miniconda/anaconda installation paths
+        home = Path.home()
+        common_paths = [
+            home / "miniconda3" / "bin" / "conda",
+            home / "anaconda3" / "bin" / "conda",
+            home / "miniconda" / "bin" / "conda",
+            home / "anaconda" / "bin" / "conda",
+            Path("/opt/conda/bin/conda"),
+            Path("/opt/miniconda/bin/conda"),
+            Path("/usr/local/bin/conda"),
+            Path("/usr/bin/conda"),
+        ]
+        for p in common_paths:
+            try:
+                if p.exists() and os.access(p, os.X_OK):
+                    conda_path = str(p)
+                    break
+            except Exception:
+                pass
+
+    if not conda_path:
+        print("Conda executable not found on system path or common directories. Skipping external binary updates.")
         return False
 
     print("Installing/updating parsnp and mashtree to latest bioconda versions...")
-    cmd = [conda_path, "install", "-y", "-c", "bioconda", "parsnp", "mashtree"]
+    # Use -p sys.prefix to force installation into the active python environment
+    cmd = [conda_path, "install", "-y", "-p", sys.prefix, "-c", "bioconda", "-c", "conda-forge", "parsnp", "mashtree"]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        print(f"Running: {' '.join(cmd)}")
+        result = subprocess.run(cmd, check=False)
         if result.returncode == 0:
             print("Conda install/update completed successfully.")
             return True
         else:
-            print("Notice: Conda install/update did not succeed (e.g. packages may not be available in this environment).")
+            print(f"Notice: Conda install/update did not succeed (exit code {result.returncode}).")
             return False
     except Exception as e:
-        print(f"Notice: Failed to run conda update: {e}")
+        print(f"Notice: Failed to run conda install: {e}")
         return False
 
 def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
