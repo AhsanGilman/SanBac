@@ -33,6 +33,15 @@ def update_databases(tool_name: str = None) -> bool:
             success = False
     return success
 
+def get_tools_env_prefix() -> Path:
+    """Gets the path of the isolated conda environment for external tools."""
+    prefix = Path(sys.prefix)
+    if prefix.parent.name == 'envs':
+        return prefix.parent / f"{prefix.name}-tools"
+    else:
+        return prefix / "envs" / "sanbac-tools"
+
+
 def is_aarch64_system() -> bool:
     """Detect if we are running on an aarch64 system (either natively or emulated)."""
     import platform
@@ -145,6 +154,11 @@ def _apply_x86_64_ld_path():
         if env_lib_dir.is_dir():
             paths_to_add.append(str(env_lib_dir))
 
+    # 4. Isolated tools environment's lib dir
+    tools_lib_dir = get_tools_env_prefix() / 'lib'
+    if tools_lib_dir.is_dir():
+        paths_to_add.append(str(tools_lib_dir))
+
     current_ld = os.environ.get('LD_LIBRARY_PATH', '')
     current_ld_parts = [p.strip() for p in current_ld.split(':') if p.strip()]
 
@@ -164,19 +178,22 @@ def _create_conda_x86_64_activation_script():
     activate_dir = Path(sys.prefix) / 'etc' / 'conda' / 'activate.d'
     activate_script = activate_dir / 'x86_64_compat.sh'
 
+    # Get tools env lib dir
+    tools_lib_dir = get_tools_env_prefix() / 'lib'
+
     try:
         activate_dir.mkdir(parents=True, exist_ok=True)
         # Always overwrite or write to ensure the latest LD_LIBRARY_PATH contents are present
         with open(activate_script, 'w') as f:
             f.write('#!/bin/sh\n')
             f.write(f'# Added by SanBac: x86_64 cross-arch library paths for aarch64 systems\n')
-            f.write(f'export LD_LIBRARY_PATH="{cross_lib_dir}:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"\n')
+            f.write(f'export LD_LIBRARY_PATH="{cross_lib_dir}:$CONDA_PREFIX/lib:{tools_lib_dir}:$LD_LIBRARY_PATH"\n')
         os.chmod(str(activate_script), 0o755)
         print(f"Created/updated conda activation script: {activate_script}")
         print("  (After reactivating your conda env, mashtree will work automatically)")
     except Exception as e:
         print(f"Warning: Could not create/update conda activation script: {e}")
-        print(f"  You may need to manually run: export LD_LIBRARY_PATH={cross_lib_dir}:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH")
+        print(f"  You may need to manually run: export LD_LIBRARY_PATH={cross_lib_dir}:$CONDA_PREFIX/lib:{tools_lib_dir}:$LD_LIBRARY_PATH")
 
 
 def _print_manual_compat_instructions():
@@ -280,14 +297,19 @@ def update_external_binaries() -> bool:
         print(f"Missing tools that need manual installation: {', '.join(tools_to_install)}")
         return False
 
-    print(f"Installing missing tools: {', '.join(tools_to_install)}...")
-    # Use -p sys.prefix to force installation into the active python environment
-    cmd = [conda_path, "install", "-y", "-p", sys.prefix, "-c", "bioconda", "-c", "conda-forge"] + tools_to_install
+    tools_env = get_tools_env_prefix()
+    action = "install"
+    # If the conda-meta directory doesn't exist, we run "create" instead of "install"
+    if not (tools_env / "conda-meta").is_dir():
+        action = "create"
+
+    print(f"Installing missing tools in isolated environment: {', '.join(tools_to_install)}...")
+    cmd = [conda_path, action, "-y", "-p", str(tools_env), "-c", "bioconda", "-c", "conda-forge"] + tools_to_install
     try:
         print(f"Running: {' '.join(cmd)}")
         result = subprocess.run(cmd, check=False)
         if result.returncode != 0:
-            print(f"Notice: Conda install/update did not succeed (exit code {result.returncode}).")
+            print(f"Notice: Conda {action} did not succeed (exit code {result.returncode}).")
             return False
             
         print("Conda install/update completed successfully.")

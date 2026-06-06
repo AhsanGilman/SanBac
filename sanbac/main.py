@@ -3,7 +3,7 @@ import platform
 import click
 from pathlib import Path
 from .pipeline import PipelineRunner
-from .updater import update_databases, update_tool, is_aarch64_system
+from .updater import update_databases, update_tool, is_aarch64_system, get_tools_env_prefix
 from .tools import load_tools
 from .config import config, CONFIG_FILE
 
@@ -32,6 +32,11 @@ def _apply_aarch64_compat():
         env_lib_dir = Path(conda_prefix) / 'lib'
         if env_lib_dir.is_dir():
             paths_to_add.append(str(env_lib_dir))
+
+    # 4. Isolated tools environment's lib dir
+    tools_lib_dir = get_tools_env_prefix() / 'lib'
+    if tools_lib_dir.is_dir():
+        paths_to_add.append(str(tools_lib_dir))
 
     current_ld = os.environ.get('LD_LIBRARY_PATH', '')
     current_ld_parts = [p.strip() for p in current_ld.split(':') if p.strip()]

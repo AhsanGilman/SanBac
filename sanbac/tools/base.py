@@ -88,6 +88,17 @@ def find_executable(cmd_name: str) -> str:
     if conda_prefix:
         bin_dirs.add(Path(conda_prefix) / "bin")
 
+    # Add isolated tools environment bin directory
+    try:
+        from ..updater import get_tools_env_prefix
+        bin_dirs.add(get_tools_env_prefix() / "bin")
+    except Exception:
+        prefix = Path(sys.prefix)
+        if prefix.parent.name == 'envs':
+            bin_dirs.add(prefix.parent / f"{prefix.name}-tools" / "bin")
+        else:
+            bin_dirs.add(prefix / "envs" / "sanbac-tools" / "bin")
+
     for bin_dir in bin_dirs:
         if not bin_dir.is_dir():
             continue
