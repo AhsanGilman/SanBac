@@ -123,7 +123,7 @@ sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 
 ### 4. Run All Tools
 To run all available annotation and phylogenetic tools (CARD, VFDB, Prokka, Parsnp, and Mashtree) at the same time:
 ```bash
-sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools card,vfdb,prokka,parsnp,mashtree --reference-parsnp /path/to/reference.fasta
+sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools all --reference-parsnp /path/to/reference.fasta
 ```
 
 #### Full CLI Usage Reference:
@@ -151,7 +151,7 @@ COMMAND OPTIONS
     -i, --input-dir DIRECTORY Path to the import folder containing FNA/FASTA files. [Required]
     -o, --output-dir DIRECTORY Path to the output folder where analysis results will be saved. [Required]
     -t, --threads INTEGER     Total threads/CPU cores to allocate to the run. [Default: 4]
-    --tools TEXT              Comma-separated list of tools to run (e.g. 'card,prokka,parsnp,mashtree').
+    --tools TEXT              Comma-separated list of tools to run (e.g. 'card,prokka,parsnp,mashtree' or 'all').
     --reference-parsnp FILE   Path to the reference FASTA/FNA file for Parsnp.
 
   config Options:
@@ -184,8 +184,8 @@ results/
 │   ├── sample1.csv       # CARD antibiotic resistance gene report (CSV only)
 │   └── sample2.csv
 ├── vfdb/
-│   ├── sample1.txt       # Virulence gene summary report (TXT only)
-│   └── sample2.txt
+│   ├── sample1_results.tsv # VFDB screening report (TSV only)
+│   └── sample2_results.tsv
 ├── prokka/
 │   ├── sample1/          # Full Prokka annotation folder
 │   │   ├── sample1.gff

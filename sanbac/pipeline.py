@@ -22,7 +22,7 @@ class PipelineRunner:
         self.all_tools: Dict[str, BaseTool] = load_tools()
         self.reference_parsnp = reference_parsnp
         
-        if selected_tools:
+        if selected_tools and "all" not in selected_tools:
             # Normalize selected_tools to lowercase
             selected_tools = [t.lower() for t in selected_tools]
             
