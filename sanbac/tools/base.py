@@ -39,3 +39,26 @@ class BaseTool(ABC):
         :return: Path to the main output file or directory created.
         """
         pass
+
+    @abstractmethod
+    def get_version(self) -> str:
+        """
+        Returns the version of the underlying external tool.
+        :return: Version string or 'Not Installed' / 'Unknown'.
+        """
+        pass
+
+def get_cmd_version(cmd_list, version_arg="--version") -> str:
+    """Helper function to run an external command and parse its version."""
+    import shutil
+    import subprocess
+    try:
+        if not shutil.which(cmd_list[0]):
+            return "Not Installed"
+        res = subprocess.run([cmd_list[0], version_arg], capture_output=True, text=True, timeout=5)
+        output = (res.stdout or res.stderr or "").strip()
+        if not output:
+            return "Unknown"
+        return output.splitlines()[0].strip()
+    except Exception:
+        return "Unknown"

@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import requests
 from pathlib import Path
-from .base import BaseTool
+from .base import BaseTool, get_cmd_version
 from ..config import config
 
 class VfdbTool(BaseTool):
@@ -183,3 +183,7 @@ class VfdbTool(BaseTool):
             print(f"[{self.name.upper()}] Error running blastn on {input_file.name}:")
             print(e.stderr or e.stdout)
             raise e
+
+    def get_version(self) -> str:
+        blastn_cmd = config.get_executable("blastn")
+        return get_cmd_version([blastn_cmd], "-version")

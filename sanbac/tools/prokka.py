@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
-from .base import BaseTool
+from .base import BaseTool, get_cmd_version
 from ..config import config
 
 class ProkkaTool(BaseTool):
@@ -64,3 +64,7 @@ class ProkkaTool(BaseTool):
             print(f"[{self.name.upper()}] Error running Prokka on {input_file.name}:")
             print(e.stderr or e.stdout)
             raise e
+
+    def get_version(self) -> str:
+        prokka_cmd = config.get_executable("prokka")
+        return get_cmd_version([prokka_cmd], "--version")

@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
-from .base import BaseTool
+from .base import BaseTool, get_cmd_version
 from ..config import config
 
 class ParsnpTool(BaseTool):
@@ -109,3 +109,12 @@ class ParsnpTool(BaseTool):
                 shutil.rmtree(temp_query_dir)
             except Exception as e:
                 print(f"Warning: Failed to clean up temporary directory {temp_query_dir}: {e}")
+
+    def get_version(self) -> str:
+        parsnp_cmd = config.get_executable("parsnp")
+        v = get_cmd_version([parsnp_cmd], "--version")
+        if v in ("Unknown", ""):
+            v = get_cmd_version([parsnp_cmd], "-h")
+            if v and v != "Not Installed" and v != "Unknown":
+                v = v.replace("|--", "").replace("--|", "").strip()
+        return v

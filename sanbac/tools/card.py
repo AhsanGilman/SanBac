@@ -3,7 +3,7 @@ import subprocess
 import requests
 import tarfile
 from pathlib import Path
-from .base import BaseTool
+from .base import BaseTool, get_cmd_version
 from ..config import config
 
 class CardTool(BaseTool):
@@ -196,3 +196,7 @@ class CardTool(BaseTool):
             print(f"[{self.name.upper()}] Error running CARD/RGI on {input_file.name}:")
             print(e.stderr or e.stdout)
             raise e
+
+    def get_version(self) -> str:
+        rgi_cmd = config.get_executable("rgi")
+        return get_cmd_version([rgi_cmd], "--version")

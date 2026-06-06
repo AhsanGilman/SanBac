@@ -5,8 +5,33 @@ from .updater import update_databases, update_tool
 from .tools import load_tools
 from .config import config, CONFIG_FILE
 
+def print_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo("SanBac 1.0.0")
+    click.echo("\nTool dependency versions:")
+    click.echo("-" * 30)
+    try:
+        tools = load_tools()
+        for name, tool in sorted(tools.items()):
+            try:
+                version = tool.get_version()
+            except Exception:
+                version = "Unknown"
+            click.echo(f"  {name:<10}: {version}")
+    except Exception as e:
+        click.echo(f"  Error loading tools: {e}")
+    ctx.exit()
+
 @click.group()
-@click.version_option(version="1.0.0", prog_name="SanBac")
+@click.option(
+    "--version",
+    is_flag=True,
+    callback=print_version,
+    expose_value=False,
+    is_eager=True,
+    help="Show the version and exit."
+)
 def main():
     """SanBac: A modular, multithreaded bacterial genomics analysis pipeline.
     

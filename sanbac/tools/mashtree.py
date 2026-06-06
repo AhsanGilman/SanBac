@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
-from .base import BaseTool
+from .base import BaseTool, get_cmd_version
 from ..config import config
 
 class MashtreeTool(BaseTool):
@@ -66,3 +66,7 @@ class MashtreeTool(BaseTool):
         except Exception as e:
             print(f"[{self.name.upper()}] Exception while running Mashtree: {e}")
             raise e
+
+    def get_version(self) -> str:
+        mashtree_cmd = config.get_executable("mashtree")
+        return get_cmd_version([mashtree_cmd], "--version")
