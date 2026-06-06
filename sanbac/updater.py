@@ -389,7 +389,7 @@ def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
             )
             print(result.stdout)
             print("Successfully updated. Please reinstall if setup.py requirements changed.")
-            update_external_binaries()
+            subprocess.run([sys.executable, "-m", "sanbac.main", "install-tools"])
             return True
         except subprocess.CalledProcessError as e:
             print(f"Git pull failed: {e.stderr or e.stdout}")
@@ -407,7 +407,7 @@ def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
         )
         print(result.stdout)
         print("SanBac has been successfully updated.")
-        update_external_binaries()
+        subprocess.run([sys.executable, "-m", "sanbac.main", "install-tools"])
         return True
     except subprocess.CalledProcessError as e:
         print(f"Pip upgrade failed: {e.stderr or e.stdout}")
