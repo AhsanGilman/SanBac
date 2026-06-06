@@ -338,13 +338,23 @@ def update_external_binaries() -> bool:
     
     for tool in tools_to_install:
         tool_env = tools_base / tool
-        action = "install"
-        specs = [tool]
         
-        if not (tool_env / "conda-meta").is_dir():
-            action = "create"
-            # Pin to standard CPython to prevent solver conflicts (like PyPy)
-            specs.append("python=3.9")
+        # If the environment folder already exists, remove it first to ensure a completely clean, conflict-free slate
+        import shutil
+        if tool_env.exists():
+            print(f"Removing existing/corrupted environment folder for {tool}...")
+            try:
+                if tool_env.is_dir():
+                    shutil.rmtree(str(tool_env), ignore_errors=True)
+                else:
+                    tool_env.unlink(missing_ok=True)
+            except Exception as e:
+                print(f"Warning: Could not remove {tool_env}: {e}")
+
+        action = "create"
+        specs = [tool]
+        # Pin to standard CPython to prevent solver conflicts (like PyPy)
+        specs.append("python=3.9")
             
         if tool == "mashtree" and is_aarch64_system():
             specs.append("libxcrypt")
