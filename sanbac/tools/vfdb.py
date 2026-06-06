@@ -38,7 +38,10 @@ class VfdbTool(BaseTool):
         fasta_file = vfdb_dir / "VFDB_setB_nt.fas"
         db_prefix = vfdb_dir / "vfdb_db"
 
-        # Download the full (core + predicted) VFDB dataset
+        # Skip download if BLAST database files already exist
+        if (db_prefix.with_suffix(".nhr").exists() or db_prefix.with_suffix(".nin").exists() or db_prefix.with_suffix(".nsq").exists()):
+            print("VFDB BLAST database already exists. Skipping download.")
+            return True
         urls_to_try = [
             ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas.gz", True),
             ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas.gz", True),

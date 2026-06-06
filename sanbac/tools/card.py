@@ -34,6 +34,12 @@ class CardTool(BaseTool):
         tar_path = card_dir / "card_data.tar.gz"
         local_db_dir = card_dir / "localDB"
 
+        # Skip download if the local database already exists and is loaded
+        card_json = local_db_dir / "card.json"
+        if card_json.exists() and card_json.stat().st_size > 0:
+            print("CARD local database already exists. Skipping download.")
+            return True
+
         url = "https://card.mcmaster.ca/latest/data"
         print(f"Downloading CARD database from {url}...")
         

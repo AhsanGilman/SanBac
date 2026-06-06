@@ -33,6 +33,87 @@ def update_databases(tool_name: str = None) -> bool:
             success = False
     return success
 
+def _ensure_x86_64_compat() -> bool:
+    """On aarch64 systems, ensure x86_64 dynamic linker is available for conda x86_64 packages."""
+    import platform
+    if platform.machine() != 'aarch64':
+        return True
+    
+    ld_path = Path('/lib64/ld-linux-x86-64.so.2')
+    if ld_path.exists():
+        return True
+    
+    print("\nDetected aarch64 system running x86_64 conda packages.")
+    print("Setting up x86_64 compatibility layer (required for mashtree/perl)...")
+
+    # Try to find existing cross-linker from libc6-amd64-cross
+    cross_ld_paths = [
+        Path('/usr/x86_64-linux-gnu/lib/ld-linux-x86-64.so.2'),
+        Path('/usr/x86_64-linux-gnu/lib64/ld-linux-x86-64.so.2'),
+    ]
+    
+    cross_ld = None
+    for p in cross_ld_paths:
+        if p.exists():
+            cross_ld = p
+            break
+    
+    if not cross_ld:
+        # Install the cross-architecture library
+        print("Installing x86_64 cross-architecture support (libc6-amd64-cross)...")
+        result = subprocess.run(
+            ['sudo', 'apt-get', 'install', '-y', 'libc6-amd64-cross'],
+            check=False
+        )
+        if result.returncode != 0:
+            print("\nCould not install x86_64 support automatically.")
+            print("Please run these commands manually, then re-run 'sanbac update-tool':")
+            print("  sudo apt-get install -y libc6-amd64-cross")
+            print("  sudo mkdir -p /lib64")
+            print("  sudo ln -sf /usr/x86_64-linux-gnu/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2")
+            return False
+        # Re-check for the cross linker
+        for p in cross_ld_paths:
+            if p.exists():
+                cross_ld = p
+                break
+    
+    if cross_ld:
+        # Create the /lib64 symlink
+        subprocess.run(['sudo', 'mkdir', '-p', '/lib64'], check=False)
+        result = subprocess.run(
+            ['sudo', 'ln', '-sf', str(cross_ld), '/lib64/ld-linux-x86-64.so.2'],
+            check=False
+        )
+        if Path('/lib64/ld-linux-x86-64.so.2').exists():
+            print("x86_64 compatibility setup successful.")
+            return True
+    
+    print("\nCould not set up x86_64 compatibility automatically.")
+    print("Please run these commands manually, then re-run 'sanbac update-tool':")
+    print("  sudo apt-get install -y libc6-amd64-cross")
+    print("  sudo mkdir -p /lib64")
+    print("  sudo ln -sf /usr/x86_64-linux-gnu/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2")
+    return False
+
+
+def _verify_tool_runs(cmd_path: str) -> bool:
+    """Check if a tool binary actually runs (not just exists)."""
+    try:
+        result = subprocess.run(
+            [cmd_path, '--version'],
+            capture_output=True, text=True, errors='replace', timeout=10
+        )
+        # Even non-zero exit is OK (some tools return 1 for --version)
+        # We just need to make sure it didn't fail with a linker/exec error
+        combined = (result.stdout or '') + (result.stderr or '')
+        if 'ld-linux-x86-64.so.2' in combined or 'No such file or directory' in combined:
+            return False
+        return True
+    except Exception:
+        return False
+
+
 def update_external_binaries() -> bool:
     """Attempts to install/update external binaries like parsnp and mashtree via conda."""
     from .tools.base import find_executable
@@ -42,13 +123,17 @@ def update_external_binaries() -> bool:
     tool_checks = {"parsnp": "parsnp", "mashtree": "mashtree"}
     
     for pkg_name, cmd_name in tool_checks.items():
-        if find_executable(cmd_name) is None:
+        exe_path = find_executable(cmd_name)
+        if exe_path is None:
+            tools_to_install.append(pkg_name)
+        elif not _verify_tool_runs(exe_path):
+            print(f"  {pkg_name}: found at {exe_path} but cannot execute (architecture issue)")
             tools_to_install.append(pkg_name)
         else:
-            print(f"  {pkg_name}: already installed ({find_executable(cmd_name)})")
+            print(f"  {pkg_name}: already installed ({exe_path})")
 
     if not tools_to_install:
-        print("All external tools (parsnp, mashtree) are already installed.")
+        print("All external tools (parsnp, mashtree) are already installed and working.")
         return True
 
     # Find conda executable
@@ -90,30 +175,30 @@ def update_external_binaries() -> bool:
     try:
         print(f"Running: {' '.join(cmd)}")
         result = subprocess.run(cmd, check=False)
-        if result.returncode == 0:
-            print("Conda install/update completed successfully.")
-            # Verify the install actually worked
-            still_missing = []
-            for pkg_name, cmd_name in tool_checks.items():
-                if pkg_name in tools_to_install and find_executable(cmd_name) is None:
-                    still_missing.append(pkg_name)
-            if still_missing:
-                print(f"Warning: The following tools were installed by conda but cannot be found: {', '.join(still_missing)}")
-                print(f"  Searched in: {sys.prefix}/bin/ and system PATH")
-                # List what files exist in bin/ matching these names
-                bin_dir = Path(sys.prefix) / "bin"
-                if bin_dir.is_dir():
-                    for pkg_name in still_missing:
-                        matches = list(bin_dir.glob(f"{pkg_name}*"))
-                        if matches:
-                            print(f"  Found files for '{pkg_name}': {[str(m) for m in matches]}")
-                        else:
-                            print(f"  No files matching '{pkg_name}*' found in {bin_dir}")
-                return False
-            return True
-        else:
+        if result.returncode != 0:
             print(f"Notice: Conda install/update did not succeed (exit code {result.returncode}).")
             return False
+            
+        print("Conda install/update completed successfully.")
+        
+        # On aarch64 systems, set up x86_64 compatibility if needed
+        _ensure_x86_64_compat()
+        
+        # Verify the install actually worked
+        still_broken = []
+        for pkg_name, cmd_name in tool_checks.items():
+            exe_path = find_executable(cmd_name)
+            if exe_path is None:
+                still_broken.append((pkg_name, "not found"))
+            elif not _verify_tool_runs(exe_path):
+                still_broken.append((pkg_name, "found but cannot execute"))
+            
+        if still_broken:
+            print(f"\nWarning: Some tools are still not working after installation:")
+            for pkg_name, reason in still_broken:
+                print(f"  {pkg_name}: {reason}")
+            return False
+        return True
     except Exception as e:
         print(f"Notice: Failed to run conda install: {e}")
         return False
