@@ -39,14 +39,9 @@ cd SanBac
 ```
 
 ### 2. Create the Conda Environment
-SanBac relies on external bioinformatics tools (`prokka`, `blast`, `rgi`) which require system dependencies. 
-
-To ensure fast and clean package resolution, we recommend setting Conda's channel priority to `strict` first:
+Creating the main conda environment is fast and platform-agnostic, as it only installs python and basic python packages. It works out of the box on Windows, Linux, and macOS:
 
 ```bash
-# Set channel priority to strict (recommended)
-conda config --set channel_priority strict
-
 # Create the environment using the local file
 conda env create -f sanbac.yml
 conda activate sanbac
@@ -66,12 +61,16 @@ source ~/.bashrc
 ```
 
 ### 4. Install External Bioinformatics Tools
-SanBac requires additional external dependencies (`parsnp`, `mashtree`). You can install and configure all of these automatically in an isolated environment by running:
+SanBac requires external bioinformatics dependencies (`blast`, `prokka`, `rgi`, `parsnp`, `mashtree`). You can install and configure all of these automatically in an isolated environment by running:
 
 ```bash
 sanbac install-tools
 ```
-This will handle all package resolution and architectural configurations (including emulation compatibility libraries on ARM/aarch64) without conflicting with your python environment.
+This command will dynamically resolve and download all five tools into an isolated environment (`sanbac-tools`), resolving any solver or dependency conflicts automatically. It also configures architecture compatibility libraries on ARM/aarch64 platforms.
+
+> [!WARNING]
+> **Windows Users**: Native Windows does not support several of these genomics tools (such as `prokka` and `rgi`). If you are on a Windows laptop, you **must** install and run SanBac within **Windows Subsystem for Linux (WSL)** to use the genomics analysis tools.
+
 
 ### 🚨 Ubuntu / ARM64 (aarch64) Native Installation
 If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`.

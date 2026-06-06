@@ -1,17 +1,13 @@
 name: sanbac
 channels:
   - conda-forge
-  - bioconda
+  - defaults
 dependencies:
   - python=3.9
   - pip
-  - blast>=2.12.0
-  - prokka>=1.14.6
-  - rgi>=6.0.3
-  - parsnp
-  - mashtree
   - pip:
     - click>=8.0.0
     - requests>=2.25.0
     - packaging>=21.0
     - pytest>=7.0.0
+

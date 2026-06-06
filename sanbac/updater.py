@@ -246,8 +246,15 @@ def _verify_tool_runs(cmd_path: str) -> bool:
 
 
 def update_external_binaries() -> bool:
-    """Attempts to install/update external binaries like parsnp and mashtree via conda."""
+    """Attempts to install/update external genomics tools in an isolated conda environment."""
+    import platform
     from .tools.base import find_executable
+
+    if platform.system() == "Windows":
+        print("\nWarning: Native Windows installation of genomics tools (blast, prokka, rgi, parsnp, mashtree) is not supported.")
+        print("To run the full SanBac pipeline, please install and run SanBac within Windows Subsystem for Linux (WSL).")
+        print("For more details, see the installation guide in README.md.")
+        return False
 
     # On aarch64 systems, set up x86_64 compatibility first
     # so we can verify if existing packages can run correctly
@@ -255,7 +262,13 @@ def update_external_binaries() -> bool:
 
     # Check which tools actually need installation
     tools_to_install = []
-    tool_checks = {"parsnp": "parsnp", "mashtree": "mashtree"}
+    tool_checks = {
+        "blast": "blastn",
+        "prokka": "prokka",
+        "rgi": "rgi",
+        "parsnp": "parsnp",
+        "mashtree": "mashtree"
+    }
     
     for pkg_name, cmd_name in tool_checks.items():
         exe_path = find_executable(cmd_name)
@@ -273,7 +286,7 @@ def update_external_binaries() -> bool:
         tools_to_install.append("libxcrypt")
 
     if not tools_to_install:
-        print("All external tools (parsnp, mashtree) are already installed and working.")
+        print("All external tools (blast, prokka, rgi, parsnp, mashtree) are already installed and working.")
         return True
 
     # Find conda executable
@@ -319,7 +332,7 @@ def update_external_binaries() -> bool:
         specs.append("python=3.10")
 
     print(f"Installing missing tools in isolated environment: {', '.join(tools_to_install)}...")
-    cmd = [conda_path, action, "-y", "-p", str(tools_env), "-c", "bioconda", "-c", "conda-forge"] + specs
+    cmd = [conda_path, action, "-y", "-p", str(tools_env), "-c", "conda-forge", "-c", "bioconda", "-c", "defaults"] + specs
     try:
         print(f"Running: {' '.join(cmd)}")
         result = subprocess.run(cmd, check=False)
@@ -350,6 +363,7 @@ def update_external_binaries() -> bool:
     except Exception as e:
         print(f"Notice: Failed to run conda install: {e}")
         return False
+
 
 def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
     """
