@@ -65,6 +65,14 @@ echo "alias sanbac='python -m sanbac.main'" >> ~/.bashrc
 source ~/.bashrc
 ```
 
+### 4. Install External Bioinformatics Tools
+SanBac requires additional external dependencies (`parsnp`, `mashtree`). You can install and configure all of these automatically in an isolated environment by running:
+
+```bash
+sanbac install-tools
+```
+This will handle all package resolution and architectural configurations (including emulation compatibility libraries on ARM/aarch64) without conflicting with your python environment.
+
 ### 🚨 Ubuntu / ARM64 (aarch64) Native Installation
 If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`.
 
@@ -135,6 +143,7 @@ Commands:
   list-tools                  List all registered and available tool plugins.
   update-db                   Download or update databases used by the analysis tools.
   update-tool                 Self-update the SanBac tool code to the latest version.
+  install-tools               Install or update external bioinformatics tools (parsnp, mashtree) via conda.
   config                      View or modify configuration parameters.
 
 COMMAND OPTIONS
