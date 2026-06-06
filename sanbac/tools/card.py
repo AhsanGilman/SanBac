@@ -199,7 +199,31 @@ class CardTool(BaseTool):
             raise e
 
     def get_version(self) -> str:
+        # Try importlib.metadata first since RGI is a Python package
+        try:
+            import importlib.metadata
+            return importlib.metadata.version("rgi")
+        except Exception:
+            pass
+        try:
+            import rgi
+            return rgi.__version__
+        except Exception:
+            pass
+
         cmd_path = self._resolve_cmd()
         if not cmd_path:
             return "Not Installed"
-        return get_cmd_version([cmd_path], "--version")
+        
+        version_str = get_cmd_version([cmd_path], "--version")
+        if "usage:" in version_str:
+            help_str = get_cmd_version([cmd_path], "--help")
+            for line in help_str.splitlines():
+                if "version" in line.lower() or "rgi" in line.lower():
+                    parts = line.strip().split()
+                    for p in parts:
+                        cleaned = p.strip("(),:;[]")
+                        if cleaned and cleaned[0].isdigit() and cleaned.replace('.', '').isdigit():
+                            return cleaned
+            return "Unknown"
+        return version_str

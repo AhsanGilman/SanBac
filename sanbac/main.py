@@ -3,7 +3,7 @@ import platform
 import click
 from pathlib import Path
 from .pipeline import PipelineRunner
-from .updater import update_databases, update_tool
+from .updater import update_databases, update_tool, is_aarch64_system
 from .tools import load_tools
 from .config import config, CONFIG_FILE
 
@@ -11,7 +11,7 @@ from .config import config, CONFIG_FILE
 def _apply_aarch64_compat():
     """On aarch64 systems, ensure x86_64 cross-architecture libraries are in LD_LIBRARY_PATH."""
     import sys
-    if platform.machine() != 'aarch64':
+    if not is_aarch64_system():
         return
         
     paths_to_add = []

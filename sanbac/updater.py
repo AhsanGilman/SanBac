@@ -33,14 +33,29 @@ def update_databases(tool_name: str = None) -> bool:
             success = False
     return success
 
+def is_aarch64_system() -> bool:
+    """Detect if we are running on an aarch64 system (either natively or emulated)."""
+    import platform
+    if platform.machine() == 'aarch64':
+        return True
+    try:
+        cpuinfo = Path('/proc/cpuinfo').read_text()
+        if 'aarch64' in cpuinfo.lower() or 'arm' in cpuinfo.lower():
+            return True
+    except Exception:
+        pass
+    if Path('/usr/x86_64-linux-gnu/lib').is_dir():
+        return True
+    return False
+
+
 def _ensure_x86_64_compat() -> bool:
     """On aarch64 systems, ensure x86_64 binaries can run by setting up:
     1. The x86_64 dynamic linker (/lib64/ld-linux-x86-64.so.2)
     2. The x86_64 shared library path (LD_LIBRARY_PATH)
     3. A conda activation script to persist these settings
     """
-    import platform
-    if platform.machine() != 'aarch64':
+    if not is_aarch64_system():
         return True
 
     cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
@@ -108,8 +123,7 @@ def _ensure_x86_64_compat() -> bool:
 
 def _apply_x86_64_ld_path():
     """Add x86_64 cross-lib directory and conda environment lib directory to LD_LIBRARY_PATH for the current process."""
-    import platform
-    if platform.machine() != 'aarch64':
+    if not is_aarch64_system():
         return
 
     paths_to_add = []
@@ -205,7 +219,6 @@ def _verify_tool_runs(cmd_path: str) -> bool:
 def update_external_binaries() -> bool:
     """Attempts to install/update external binaries like parsnp and mashtree via conda."""
     from .tools.base import find_executable
-    import platform
 
     # On aarch64 systems, set up x86_64 compatibility first
     # so we can verify if existing packages can run correctly
@@ -227,8 +240,7 @@ def update_external_binaries() -> bool:
 
     # If on aarch64 and mashtree is being installed/updated, install libxcrypt
     # to supply the required x86_64 libcrypt.so.1 inside the conda environment
-    is_aarch64 = (platform.machine() == 'aarch64')
-    if is_aarch64 and "mashtree" in tools_to_install:
+    if is_aarch64_system() and "mashtree" in tools_to_install:
         tools_to_install.append("libxcrypt")
 
     if not tools_to_install:
