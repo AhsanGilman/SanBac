@@ -40,14 +40,20 @@ def main():
     default=None,
     help="Comma-separated list of tools to run (e.g. 'card,prokka'). By default, runs all tools."
 )
-def run_pipeline(input_dir: Path, output_dir: Path, threads: int, tools: str):
+@click.option(
+    "--reference-parsnp",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Path to the reference FASTA/FNA file for Parsnp phylogenetic tree generation."
+)
+def run_pipeline(input_dir: Path, output_dir: Path, threads: int, tools: str, reference_parsnp: Path):
     """Scan the input folder for FASTA files and run selected genomics analysis tools."""
     selected = None
     if tools:
         selected = [t.strip().lower() for t in tools.split(",")]
         
     try:
-        runner = PipelineRunner(selected_tools=selected)
+        runner = PipelineRunner(selected_tools=selected, reference_parsnp=reference_parsnp)
         runner.run_pipeline(input_dir=input_dir, output_dir=output_dir, total_threads=threads)
     except Exception as e:
         click.secho(f"Pipeline error: {e}", fg="red", err=True)

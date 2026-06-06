@@ -18,8 +18,10 @@ def discover_fasta_files(input_dir: Path) -> List[Path]:
     return sorted(fasta_files)
 
 class PipelineRunner:
-    def __init__(self, selected_tools: List[str] = None):
+    def __init__(self, selected_tools: List[str] = None, reference_parsnp: Path = None):
         self.all_tools: Dict[str, BaseTool] = load_tools()
+        self.reference_parsnp = reference_parsnp
+        
         if selected_tools:
             # Filter and order tools according to user request
             self.tools_to_run = []
@@ -31,12 +33,16 @@ class PipelineRunner:
         else:
             # Default sequence: first run preferred core tools, then any other plugins
             preferred_order = ["card", "vfdb", "prokka"]
+            if self.reference_parsnp and "parsnp" in self.all_tools:
+                preferred_order.append("parsnp")
             ordered = []
             for name in preferred_order:
                 if name in self.all_tools:
                     ordered.append(self.all_tools[name])
             for name, tool in self.all_tools.items():
                 if name not in preferred_order:
+                    if name == "parsnp":
+                        continue
                     ordered.append(tool)
             self.tools_to_run = ordered
 
@@ -68,6 +74,21 @@ class PipelineRunner:
             tool_output_dir = output_path / tool.name
             tool_output_dir.mkdir(parents=True, exist_ok=True)
             
+            if not tool.run_per_file:
+                if tool.name == "parsnp":
+                    tool.reference_parsnp = self.reference_parsnp
+                    if not self.reference_parsnp:
+                        print(f"Error: Reference FASTA path is required for {tool.name.upper()}. Use --reference-parsnp option. Skipping.")
+                        continue
+                
+                print(f"Processing directory: {input_path} as a single run for {tool.name.upper()}")
+                try:
+                    result_path = tool.run(input_path, tool_output_dir, total_threads)
+                    print(f"Finished: {tool.name.upper()} on {input_path.name} -> Output at: {result_path}")
+                except Exception as exc:
+                    print(f"Error: {tool.name.upper()} failed on {input_path.name} with exception: {exc}")
+                continue
+
             # Determine parallel files configuration:
             # Divide threads evenly across files processed in parallel.
             num_files = len(fasta_files)

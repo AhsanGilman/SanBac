@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch, MagicMock
 import tempfile
 import shutil
 from pathlib import Path
@@ -60,6 +61,61 @@ class TestSanBac(unittest.TestCase):
         runner_default = PipelineRunner()
         names = [t.name for t in runner_default.tools_to_run]
         self.assertListEqual(names, ["card", "vfdb", "prokka"])
+
+    def test_parsnp_plugin_discovery_and_properties(self):
+        """Test that Parsnp is discovered and implements properties correctly."""
+        tools = load_tools()
+        self.assertIn("parsnp", tools)
+        parsnp = tools["parsnp"]
+        self.assertEqual(parsnp.name, "parsnp")
+        self.assertFalse(parsnp.run_per_file)
+
+    def test_pipeline_runner_with_parsnp_reference(self):
+        """Test that parsnp is added to tools_to_run when reference_parsnp is provided."""
+        ref_file = self.input_path / "reference.fasta"
+        ref_file.write_text(">ref\nATCG\n")
+        
+        runner = PipelineRunner(reference_parsnp=ref_file)
+        names = [t.name for t in runner.tools_to_run]
+        self.assertListEqual(names, ["card", "vfdb", "prokka", "parsnp"])
+
+    @patch("subprocess.run")
+    def test_parsnp_tool_run(self, mock_run):
+        """Test ParsnpTool.run execution, directory preparation, copying, and cleanup."""
+        tools = load_tools()
+        parsnp = tools["parsnp"]
+        
+        ref_file = self.input_path / "reference.fasta"
+        ref_file.write_text(">ref\nATCG\n")
+        
+        query_file = self.input_path / "query1.fasta"
+        query_file.write_text(">query1\nCGTA\n")
+        
+        parsnp.reference_parsnp = ref_file
+        
+        # Set up mock command execution
+        mock_run.return_value = MagicMock(returncode=0)
+        
+        # Create a dummy output folder and parsnp.tree to mock success
+        parsnp_outdir = self.output_path / "parsnp"
+        
+        # A side_effect to create the expected parsnp.tree during run execution
+        def create_tree_file(*args, **kwargs):
+            parsnp_outdir.mkdir(parents=True, exist_ok=True)
+            (parsnp_outdir / "parsnp.tree").write_text("tree_content")
+            return MagicMock(returncode=0)
+            
+        mock_run.side_effect = create_tree_file
+        
+        # We need parsnp to be marked installed
+        with patch.object(parsnp, "is_installed", return_value=True):
+            result = parsnp.run(self.input_path, parsnp_outdir, threads=2)
+            
+        # Verify the tree is copied to the right location
+        dest_tree = self.output_path / "Phylogenetic tree" / "presnp_treee.tree"
+        self.assertTrue(dest_tree.exists())
+        self.assertEqual(dest_tree.read_text(), "tree_content")
+        self.assertEqual(result, dest_tree)
 
 if __name__ == "__main__":
     unittest.main()

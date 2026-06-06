@@ -8,6 +8,7 @@ dependencies:
   - blast>=2.12.0
   - prokka>=1.14.6
   - rgi>=6.0.3
+  - parsnp
   - pip:
     - click>=8.0.0
     - requests>=2.25.0

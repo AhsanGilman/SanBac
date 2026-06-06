@@ -9,6 +9,7 @@ By default, the pipeline runs the following tools in order:
 1. **CARD** (Comprehensive Antibiotic Resistance Database) — via RGI (Resistance Gene Identifier) to identify antibiotic resistance genes (ARGs).
 2. **VFDB** (Virulence Factor Database) — via blastn to screen for virulence factors.
 3. **Prokka** — to execute rapid prokaryotic genome annotation (protein coding genes, tRNA, rRNA).
+4. **Parsnp** (optional) — to perform core genome alignment and construct a phylogenetic tree (automatically appended to the default list if `--reference-parsnp` is supplied).
 
 The architecture is highly extensible, allowing you to easily add new tools (e.g. tools 4, 5, 6) simply by adding a Python script.
 
@@ -127,7 +128,8 @@ sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 
 *   `-i, --input-dir`: **(Required)** Folder containing FASTA genome assembly files.
 *   `-o, --output-dir`: **(Required)** Output directory where subdirectories for each tool will be created.
 *   `-t, --threads`: **(Default: 4)** Total CPU cores to allocate.
-*   `--tools`: Comma-separated list of tools to run (e.g. `--tools card,prokka`). If omitted, all tools run sequentially.
+*   `--tools`: Comma-separated list of tools to run (e.g. `--tools card,prokka,parsnp`). If omitted, all tools run sequentially.
+*   `--reference-parsnp`: Path to a reference FASTA/FNA genome file. If provided, the **Parsnp** phylogenetic tool is run to align all query genomes in the input folder against this reference.
 
 ---
 
@@ -149,14 +151,20 @@ results/
 ├── vfdb/
 │   ├── sample1.txt       # Virulence gene summary report (TXT only)
 │   └── sample2.txt
-└── prokka/
-    ├── sample1/          # Full Prokka annotation folder
-    │   ├── sample1.gff
-    │   ├── sample1.faa
-    │   └── sample1.fna
-    └── sample2/
-        ├── sample2.gff
-        └── sample2.faa
+├── prokka/
+│   ├── sample1/          # Full Prokka annotation folder
+│   │   ├── sample1.gff
+│   │   ├── sample1.faa
+│   │   └── sample1.fna
+│   └── sample2/
+│       ├── sample2.gff
+│       └── sample2.faa
+├── parsnp/               # Parsnp raw output directory
+│   ├── parsnp.xmfa       # Core alignment
+│   ├── parsnp.snps.mblocks # SNP signatures
+│   └── parsnp.tree       # Resulting phylogeny
+└── Phylogenetic tree/
+    └── presnp_treee.tree # Final phylogenetic tree copy
 ```
 
 ### 3. Self-Updating

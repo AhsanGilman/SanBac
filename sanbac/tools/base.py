@@ -14,6 +14,11 @@ class BaseTool(ABC):
         """A brief description of what this tool does."""
         pass
 
+    @property
+    def run_per_file(self) -> bool:
+        """Whether this tool runs per file (True) or on the entire input directory (False)."""
+        return True
+
     @abstractmethod
     def is_installed(self) -> bool:
         """Checks if the underlying external commands needed are executable/installed."""

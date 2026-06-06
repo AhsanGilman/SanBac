@@ -14,7 +14,8 @@ class Config:
             "rgi": "rgi",
             "blastn": "blastn",
             "makeblastdb": "makeblastdb",
-            "prokka": "prokka"
+            "prokka": "prokka",
+            "parsnp": "parsnp"
         }
         self.load()
 
