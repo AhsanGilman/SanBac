@@ -33,6 +33,28 @@ def update_databases(tool_name: str = None) -> bool:
             success = False
     return success
 
+def update_external_binaries() -> bool:
+    """Attempts to update external binaries like parsnp and mashtree via conda."""
+    import shutil
+    conda_path = shutil.which("conda")
+    if not conda_path:
+        print("Conda not found on system path. Skipping external binary updates.")
+        return False
+
+    print("Checking/updating parsnp and mashtree to latest bioconda versions...")
+    cmd = [conda_path, "update", "-y", "-c", "bioconda", "parsnp", "mashtree"]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            print("Conda update check completed successfully.")
+            return True
+        else:
+            print("Notice: Conda update did not succeed (e.g. packages may not be installed in the active environment).")
+            return False
+    except Exception as e:
+        print(f"Notice: Failed to run conda update: {e}")
+        return False
+
 def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
     """
     Attempts to update the tool.
@@ -57,6 +79,7 @@ def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
             )
             print(result.stdout)
             print("Successfully updated. Please reinstall if setup.py requirements changed.")
+            update_external_binaries()
             return True
         except subprocess.CalledProcessError as e:
             print(f"Git pull failed: {e.stderr or e.stdout}")
@@ -74,6 +97,7 @@ def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
         )
         print(result.stdout)
         print("SanBac has been successfully updated.")
+        update_external_binaries()
         return True
     except subprocess.CalledProcessError as e:
         print(f"Pip upgrade failed: {e.stderr or e.stdout}")
