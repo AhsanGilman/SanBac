@@ -79,9 +79,11 @@ class ParsnpTool(BaseTool):
             except Exception as e:
                 print(f"Warning: Failed to remove existing output directory {output_dir}: {e}")
 
-        # Run parsnp
+        # Run parsnp with -c (curated directory) flag to ignore MUMi distance filtering
+        # and ensure a tree is generated even for slightly divergent draft genomes.
         cmd = [
             parsnp_cmd,
+            "-c",
             "-r", str(ref_path),
             "-d", str(temp_query_dir),
             "-o", str(output_dir),
@@ -97,15 +99,38 @@ class ParsnpTool(BaseTool):
                 print(result.stderr or result.stdout)
                 raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout, stderr=result.stderr)
             
-            parsnp_tree = output_dir / "parsnp.tree"
-            dest_tree = output_dir / "presnp_treee.tree"
-            
-            if parsnp_tree.exists():
-                shutil.move(parsnp_tree, dest_tree)
+            # Find the tree file recursively in the output directory
+            found_tree_path = None
+            for p in output_dir.rglob("*.tree"):
+                found_tree_path = p
+                break
+
+            # If not found under *.tree, check standard name
+            if not found_tree_path:
+                standard_tree = output_dir / "parsnp.tree"
+                if standard_tree.exists():
+                    found_tree_path = standard_tree
+
+            if found_tree_path and found_tree_path.exists():
+                # Move tree file to a temporary location outside output_dir
+                temp_tree = output_dir.parent / "temp_parsnp_tree.tree"
+                shutil.move(found_tree_path, temp_tree)
+
+                # Clean up the entire output directory
+                try:
+                    shutil.rmtree(output_dir)
+                except Exception:
+                    pass
+
+                # Recreate the output directory and move the tree file back
+                output_dir.mkdir(parents=True, exist_ok=True)
+                dest_tree = output_dir / "presnp_treee.tree"
+                shutil.move(temp_tree, dest_tree)
+                
                 print(f"[{self.name.upper()}] Phylogenetic tree saved at: {dest_tree}")
                 return dest_tree
             else:
-                raise FileNotFoundError(f"Expected Parsnp output tree not found at {parsnp_tree}")
+                raise FileNotFoundError(f"Expected Parsnp output tree file not found in {output_dir}")
                 
         finally:
             # Clean up temp_query_dir

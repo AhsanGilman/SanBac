@@ -170,20 +170,25 @@ class CardTool(BaseTool):
             csv_output = Path(f"{output_prefix}.csv")
 
             if txt_output.exists():
-                # Convert TXT to CSV using pandas
+                # Convert TXT (TSV) to CSV using python's built-in csv module
                 try:
-                    import pandas as pd
-                    df = pd.read_csv(txt_output, sep="\t")
-                    df.to_csv(csv_output, index=False)
+                    import csv
+                    with open(txt_output, "r", encoding="utf-8", errors="replace") as f_in:
+                        reader = csv.reader(f_in, delimiter="\t")
+                        rows = list(reader)
+                    with open(csv_output, "w", newline="", encoding="utf-8") as f_out:
+                        writer = csv.writer(f_out)
+                        writer.writerows(rows)
                     print(f"[{self.name.upper()}] CSV file saved at: {csv_output}")
+                    
+                    # Delete txt output only if CSV conversion succeeded
+                    try:
+                        txt_output.unlink()
+                    except Exception:
+                        pass
                 except Exception as e:
                     print(f"[{self.name.upper()}] Error converting TXT to CSV: {e}")
-                
-                # Delete txt output
-                try:
-                    txt_output.unlink()
-                except Exception:
-                    pass
+                    # Keep the txt output as fallback if conversion failed
 
             if json_output.exists():
                 # Delete json output
@@ -214,6 +219,29 @@ class CardTool(BaseTool):
         cmd_path = self._resolve_cmd()
         if not cmd_path:
             return "Not Installed"
+
+        # Since RGI is in an isolated conda env, run python in that env to query its version
+        from pathlib import Path
+        python_exe = Path(cmd_path).parent / "python"
+        if python_exe.exists():
+            try:
+                res = run_subprocess(
+                    [str(python_exe), "-c", "import rgi; print(rgi.__version__)"],
+                    capture_output=True, text=True, errors="replace", timeout=5
+                )
+                if res.returncode == 0 and res.stdout.strip():
+                    return res.stdout.strip()
+            except Exception:
+                pass
+            try:
+                res = run_subprocess(
+                    [str(python_exe), "-c", "import importlib.metadata; print(importlib.metadata.version('rgi'))"],
+                    capture_output=True, text=True, errors="replace", timeout=5
+                )
+                if res.returncode == 0 and res.stdout.strip():
+                    return res.stdout.strip()
+            except Exception:
+                pass
         
         version_str = get_cmd_version([cmd_path], "--version")
         if "usage:" in version_str:
