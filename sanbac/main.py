@@ -1,9 +1,27 @@
+import os
+import platform
 import click
 from pathlib import Path
 from .pipeline import PipelineRunner
 from .updater import update_databases, update_tool
 from .tools import load_tools
 from .config import config, CONFIG_FILE
+
+
+def _apply_aarch64_compat():
+    """On aarch64 systems, ensure x86_64 cross-architecture libraries are in LD_LIBRARY_PATH."""
+    if platform.machine() != 'aarch64':
+        return
+    cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
+    if not Path(cross_lib_dir).is_dir():
+        return
+    current_ld = os.environ.get('LD_LIBRARY_PATH', '')
+    if cross_lib_dir not in current_ld:
+        os.environ['LD_LIBRARY_PATH'] = f"{cross_lib_dir}:{current_ld}" if current_ld else cross_lib_dir
+
+
+# Apply at import time so all subprocess calls inherit the correct LD_LIBRARY_PATH
+_apply_aarch64_compat()
 
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:

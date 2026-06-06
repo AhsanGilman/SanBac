@@ -34,67 +34,119 @@ def update_databases(tool_name: str = None) -> bool:
     return success
 
 def _ensure_x86_64_compat() -> bool:
-    """On aarch64 systems, ensure x86_64 dynamic linker is available for conda x86_64 packages."""
+    """On aarch64 systems, ensure x86_64 binaries can run by setting up:
+    1. The x86_64 dynamic linker (/lib64/ld-linux-x86-64.so.2)
+    2. The x86_64 shared library path (LD_LIBRARY_PATH)
+    3. A conda activation script to persist these settings
+    """
     import platform
     if platform.machine() != 'aarch64':
         return True
-    
-    ld_path = Path('/lib64/ld-linux-x86-64.so.2')
-    if ld_path.exists():
-        return True
-    
-    print("\nDetected aarch64 system running x86_64 conda packages.")
-    print("Setting up x86_64 compatibility layer (required for mashtree/perl)...")
 
-    # Try to find existing cross-linker from libc6-amd64-cross
-    cross_ld_paths = [
-        Path('/usr/x86_64-linux-gnu/lib/ld-linux-x86-64.so.2'),
-        Path('/usr/x86_64-linux-gnu/lib64/ld-linux-x86-64.so.2'),
-    ]
-    
-    cross_ld = None
-    for p in cross_ld_paths:
-        if p.exists():
-            cross_ld = p
-            break
-    
-    if not cross_ld:
-        # Install the cross-architecture library
-        print("Installing x86_64 cross-architecture support (libc6-amd64-cross)...")
-        result = subprocess.run(
-            ['sudo', 'apt-get', 'install', '-y', 'libc6-amd64-cross'],
-            check=False
-        )
-        if result.returncode != 0:
-            print("\nCould not install x86_64 support automatically.")
-            print("Please run these commands manually, then re-run 'sanbac update-tool':")
-            print("  sudo apt-get install -y libc6-amd64-cross")
-            print("  sudo mkdir -p /lib64")
-            print("  sudo ln -sf /usr/x86_64-linux-gnu/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2")
-            return False
-        # Re-check for the cross linker
-        for p in cross_ld_paths:
-            if p.exists():
-                cross_ld = p
-                break
-    
-    if cross_ld:
-        # Create the /lib64 symlink
-        subprocess.run(['sudo', 'mkdir', '-p', '/lib64'], check=False)
-        result = subprocess.run(
-            ['sudo', 'ln', '-sf', str(cross_ld), '/lib64/ld-linux-x86-64.so.2'],
-            check=False
-        )
-        if Path('/lib64/ld-linux-x86-64.so.2').exists():
-            print("x86_64 compatibility setup successful.")
-            return True
-    
+    cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
+    needs_install = False
+
+    # Check if the cross-arch libraries are installed
+    if not Path(cross_lib_dir).is_dir():
+        needs_install = True
+
+    # Check if the dynamic linker symlink exists
+    ld_path = Path('/lib64/ld-linux-x86-64.so.2')
+    if not ld_path.exists():
+        needs_install = True
+
+    if needs_install:
+        print("\nDetected aarch64 system running x86_64 conda packages.")
+        print("Setting up x86_64 compatibility layer (required for mashtree/perl)...")
+
+        # Install libc6-amd64-cross if cross libs are missing
+        if not Path(cross_lib_dir).is_dir():
+            print("Installing x86_64 cross-architecture support (libc6-amd64-cross)...")
+            result = subprocess.run(
+                ['sudo', 'apt-get', 'install', '-y', 'libc6-amd64-cross'],
+                check=False
+            )
+            if result.returncode != 0:
+                _print_manual_compat_instructions()
+                return False
+
+        # Create the /lib64 dynamic linker symlink if missing
+        if not ld_path.exists():
+            cross_ld_paths = [
+                Path('/usr/x86_64-linux-gnu/lib/ld-linux-x86-64.so.2'),
+                Path('/usr/x86_64-linux-gnu/lib64/ld-linux-x86-64.so.2'),
+            ]
+            cross_ld = None
+            for p in cross_ld_paths:
+                if p.exists():
+                    cross_ld = p
+                    break
+
+            if cross_ld:
+                subprocess.run(['sudo', 'mkdir', '-p', '/lib64'], check=False)
+                subprocess.run(
+                    ['sudo', 'ln', '-sf', str(cross_ld), '/lib64/ld-linux-x86-64.so.2'],
+                    check=False
+                )
+                if ld_path.exists():
+                    print("x86_64 dynamic linker symlink created.")
+                else:
+                    _print_manual_compat_instructions()
+                    return False
+            else:
+                _print_manual_compat_instructions()
+                return False
+
+    # Always set LD_LIBRARY_PATH for the current process
+    _apply_x86_64_ld_path()
+
+    # Persist the fix via a conda env activation script
+    _create_conda_x86_64_activation_script()
+
+    return True
+
+
+def _apply_x86_64_ld_path():
+    """Add x86_64 cross-lib directory to LD_LIBRARY_PATH for the current process."""
+    cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
+    if not Path(cross_lib_dir).is_dir():
+        return
+    current_ld = os.environ.get('LD_LIBRARY_PATH', '')
+    if cross_lib_dir not in current_ld:
+        new_ld = f"{cross_lib_dir}:{current_ld}" if current_ld else cross_lib_dir
+        os.environ['LD_LIBRARY_PATH'] = new_ld
+
+
+def _create_conda_x86_64_activation_script():
+    """Create a conda activation script that sets LD_LIBRARY_PATH on env activation."""
+    cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
+    activate_dir = Path(sys.prefix) / 'etc' / 'conda' / 'activate.d'
+    activate_script = activate_dir / 'x86_64_compat.sh'
+
+    if activate_script.exists():
+        return  # Already created
+
+    try:
+        activate_dir.mkdir(parents=True, exist_ok=True)
+        with open(activate_script, 'w') as f:
+            f.write('#!/bin/sh\n')
+            f.write(f'# Added by SanBac: x86_64 cross-arch library path for aarch64 systems\n')
+            f.write(f'export LD_LIBRARY_PATH="{cross_lib_dir}:$LD_LIBRARY_PATH"\n')
+        os.chmod(str(activate_script), 0o755)
+        print(f"Created conda activation script: {activate_script}")
+        print("  (After reactivating your conda env, mashtree will work automatically)")
+    except Exception as e:
+        print(f"Warning: Could not create conda activation script: {e}")
+        print(f"  You may need to manually run: export LD_LIBRARY_PATH={cross_lib_dir}:$LD_LIBRARY_PATH")
+
+
+def _print_manual_compat_instructions():
+    """Print manual instructions for setting up x86_64 compatibility."""
     print("\nCould not set up x86_64 compatibility automatically.")
     print("Please run these commands manually, then re-run 'sanbac update-tool':")
     print("  sudo apt-get install -y libc6-amd64-cross")
     print("  sudo mkdir -p /lib64")
     print("  sudo ln -sf /usr/x86_64-linux-gnu/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2")
-    return False
 
 
 def _verify_tool_runs(cmd_path: str) -> bool:
