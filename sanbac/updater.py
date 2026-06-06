@@ -351,14 +351,34 @@ def update_external_binaries() -> bool:
             
         print(f"\n--- Installing {tool} ---")
         cmd = [conda_path, action, "-y", "-p", str(tool_env), "-c", "conda-forge", "-c", "bioconda", "-c", "defaults"] + specs
-        try:
-            print(f"Running: {' '.join(cmd)}")
-            result = subprocess.run(cmd, check=False)
-            if result.returncode != 0:
-                print(f"Notice: Conda {action} did not succeed for {tool} (exit code {result.returncode}).")
-                return False
-        except Exception as e:
-            print(f"Notice: Failed to run conda install for {tool}: {e}")
+        success = False
+        for attempt in range(2):
+            try:
+                print(f"Running: {' '.join(cmd)}")
+                result = subprocess.run(cmd, check=False)
+                if result.returncode == 0:
+                    success = True
+                    break
+                else:
+                    print(f"Notice: Conda {action} did not succeed for {tool} (exit code {result.returncode}).")
+            except Exception as e:
+                print(f"Notice: Failed to run conda install for {tool}: {e}")
+                
+            if attempt == 0:
+                print("\nAttempting to clear conda cache and clean up corrupted files to free space...")
+                try:
+                    subprocess.run([conda_path, "clean", "-a", "-y"], check=False)
+                except Exception as clean_err:
+                    print(f"Notice: Conda clean failed: {clean_err}")
+                
+                import shutil
+                if tool_env.exists():
+                    try:
+                        shutil.rmtree(str(tool_env), ignore_errors=True)
+                    except Exception as rm_err:
+                        print(f"Notice: Failed to clean directory {tool_env}: {rm_err}")
+                        
+        if not success:
             return False
             
     print("\nConda install/update completed successfully.")
