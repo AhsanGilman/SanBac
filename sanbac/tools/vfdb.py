@@ -33,25 +33,49 @@ class VfdbTool(BaseTool):
         db_prefix = vfdb_dir / "vfdb_db"
 
         # Download the full (core + predicted) VFDB dataset
-        url = "https://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas.gz"
+        urls_to_try = [
+            ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas.gz", True),
+            ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas.gz", True),
+            ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas", False),
+            ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas", False),
+        ]
+        
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
         }
-        print(f"Downloading full VFDB database from {url}...")
-        try:
-            response = requests.get(url, headers=headers, stream=True, timeout=60)
-            if response.status_code == 200:
-                with open(fasta_gz, "wb") as f:
-                    shutil.copyfileobj(response.raw, f)
-            else:
-                fallback_url = "https://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas"
-                print(f"Gzip file not found (HTTP {response.status_code}). Trying fallback URL: {fallback_url}...")
-                res_fb = requests.get(fallback_url, headers=headers, timeout=60)
-                res_fb.raise_for_status()
-                with open(fasta_file, "wb") as f:
-                    f.write(res_fb.content)
-        except Exception as e:
-            print(f"Error downloading VFDB: {e}")
+
+        success = False
+        for url, is_gzip in urls_to_try:
+            target_path = fasta_gz if is_gzip else fasta_file
+            print(f"Downloading VFDB database from {url}...")
+            try:
+                response = requests.get(url, headers=headers, stream=True, timeout=15)
+                if response.status_code == 200:
+                    total_size = int(response.headers.get('content-length', 0))
+                    downloaded = 0
+                    chunk_size = 1024 * 64
+                    with open(target_path, "wb") as f:
+                        for chunk in response.iter_content(chunk_size=chunk_size):
+                            if chunk:
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                if total_size > 0:
+                                    percent = (downloaded / total_size) * 100
+                                    if (downloaded // chunk_size) % 10 == 0:
+                                        print(f"  Downloaded: {downloaded / (1024 * 1024):.2f} MB / {total_size / (1024 * 1024):.2f} MB ({percent:.1f}%)", flush=True)
+                                else:
+                                    if (downloaded // chunk_size) % 10 == 0:
+                                        print(f"  Downloaded: {downloaded / (1024 * 1024):.2f} MB", flush=True)
+                    print("Download completed successfully.")
+                    success = True
+                    break
+                else:
+                    print(f"  HTTP status code: {response.status_code}. Trying next URL...")
+            except Exception as e:
+                print(f"  Error or timeout downloading from {url}: {e}. Trying next URL...")
+
+        if not success:
+            print("Error: All download attempts for VFDB database failed.")
             return False
 
         # Extract if gzipped
