@@ -32,7 +32,7 @@ class PipelineRunner:
                     print(f"Warning: Tool '{t}' is not registered or found.")
         else:
             # Default sequence: run all registered tools sequentially
-            preferred_order = ["card", "vfdb", "prokka", "parsnp", "mashtree"]
+            preferred_order = ["card", "prokka", "vfdb", "parsnp", "mashtree"]
             ordered = []
             for name in preferred_order:
                 if name in self.all_tools:

@@ -12,8 +12,7 @@ class Config:
         self.db_dir = DEFAULT_DB_DIR
         self.executables = {
             "rgi": "rgi",
-            "blastn": "blastn",
-            "makeblastdb": "makeblastdb",
+            "diamond": "diamond",
             "prokka": "prokka",
             "parsnp": "parsnp",
             "mashtree": "mashtree"

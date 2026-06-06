@@ -274,7 +274,7 @@ def update_external_binaries() -> bool:
     # Check which tools actually need installation
     tools_to_install = []
     tool_checks = {
-        "blast": "blastn",
+        "diamond": "diamond",
         "prokka": "prokka",
         "rgi": "rgi",
         "parsnp": "parsnp",
@@ -297,7 +297,7 @@ def update_external_binaries() -> bool:
         tools_to_install.append("libxcrypt")
 
     if not tools_to_install:
-        print("All external tools (blast, prokka, rgi, parsnp, mashtree) are already installed and working.")
+        print("All external tools (diamond, prokka, rgi, parsnp, mashtree) are already installed and working.")
         return True
 
     # Find conda executable

@@ -13,36 +13,32 @@ class VfdbTool(BaseTool):
 
     @property
     def description(self) -> str:
-        return "VFDB (Virulence Factor Database) blastn alignment for identifying virulence factor genes"
+        return "VFDB (Virulence Factor Database) DIAMOND blastp alignment for identifying virulence factor genes"
 
-    def _resolve_blastn(self) -> str:
-        configured = config.get_executable("blastn")
-        return find_executable(configured)
-
-    def _resolve_makeblastdb(self) -> str:
-        configured = config.get_executable("makeblastdb")
+    def _resolve_diamond(self) -> str:
+        configured = config.get_executable("diamond")
         return find_executable(configured)
 
     def is_installed(self) -> bool:
-        return self._resolve_blastn() is not None and self._resolve_makeblastdb() is not None
+        return self._resolve_diamond() is not None
 
     def update_db(self) -> bool:
         if not self.is_installed():
-            print("Error: BLAST tools ('blastn' or 'makeblastdb') not found. Please install NCBI BLAST+.")
+            print("Error: DIAMOND tool ('diamond') not found. Please install DIAMOND first.")
             return False
 
         vfdb_dir = config.db_dir / "vfdb"
         vfdb_dir.mkdir(parents=True, exist_ok=True)
         
-        fasta_gz = vfdb_dir / "VFDB_setB_nt.fas.gz"
-        fasta_file = vfdb_dir / "VFDB_setB_nt.fas"
-        db_prefix = vfdb_dir / "vfdb_db"
+        fasta_gz = vfdb_dir / "VFDB_setB_pro.fas.gz"
+        fasta_file = vfdb_dir / "VFDB_setB_pro.fas"
+        db_prefix = vfdb_dir / "vfdb"
 
         urls_to_try = [
-            ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas.gz", True),
-            ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas.gz", True),
-            ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas", False),
-            ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_nt.fas", False),
+            ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz", True),
+            ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz", True),
+            ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas", False),
+            ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas", False),
         ]
         
         headers = {
@@ -85,7 +81,7 @@ class VfdbTool(BaseTool):
 
         # Extract if gzipped
         if fasta_gz.exists():
-            print("Extracting VFDB_setB_nt.fas.gz...")
+            print("Extracting VFDB_setB_pro.fas.gz...")
             try:
                 with gzip.open(fasta_gz, 'rb') as f_in:
                     with open(fasta_file, 'wb') as f_out:
@@ -95,113 +91,88 @@ class VfdbTool(BaseTool):
                 print(f"Error extracting database file: {e}")
                 return False
 
-        print("Building BLAST database for VFDB...")
-        makeblastdb_cmd = self._resolve_makeblastdb() or config.get_executable("makeblastdb")
+        print("Building DIAMOND database for VFDB...")
+        diamond_cmd = self._resolve_diamond()
         cmd = [
-            makeblastdb_cmd,
-            "-in", str(fasta_file),
-            "-dbtype", "nucl",
-            "-out", str(db_prefix)
+            diamond_cmd,
+            "makedb",
+            "--in", str(fasta_file),
+            "-d", str(db_prefix)
         ]
         try:
             run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
-            print("VFDB BLAST database built successfully.")
+            print("VFDB DIAMOND database built successfully.")
             return True
         except subprocess.CalledProcessError as e:
-            print(f"Error running makeblastdb: {e.stderr or e.stdout}")
+            print(f"Error running diamond makedb: {e.stderr or e.stdout}")
             return False
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
-        blastn_cmd = self._resolve_blastn()
-        if not blastn_cmd:
-            raise FileNotFoundError("BLAST+ tools ('blastn' / 'makeblastdb') are not installed or not in PATH.")
+        diamond_cmd = self._resolve_diamond()
+        if not diamond_cmd:
+            raise FileNotFoundError("DIAMOND is not installed or not in PATH.")
 
         output_dir.mkdir(parents=True, exist_ok=True)
         vfdb_dir = config.db_dir / "vfdb"
-        db_prefix = vfdb_dir / "vfdb_db"
+        db_prefix = vfdb_dir / "vfdb"
         
-        # Check if database files exist
-        if not (db_prefix.with_suffix(".nhr").exists() or db_prefix.with_suffix(".nin").exists() or db_prefix.with_suffix(".nsq").exists()):
+        # Check if database file exists
+        if not db_prefix.with_suffix(".dmnd").exists():
             print(f"VFDB database not found at {db_prefix}. Attempting download/build...")
             if not self.update_db():
                 raise RuntimeError("Could not find or build VFDB database.")
 
+        # Ensure Prokka protein sequence (.faa) output is present
+        prokka_faa_path = output_dir.parent / "prokka" / input_file.stem / f"{input_file.stem}.faa"
+        if not prokka_faa_path.exists():
+            print(f"[{self.name.upper()}] Prokka output not found at {prokka_faa_path}. Running Prokka first...")
+            from .prokka import ProkkaTool
+            prokka_tool = ProkkaTool()
+            if not prokka_tool.is_installed():
+                raise FileNotFoundError("Prokka is not installed but is required to generate proteins for VFDB.")
+            
+            prokka_outdir = output_dir.parent / "prokka"
+            prokka_tool.run(input_file, prokka_outdir, threads)
+            
+            if not prokka_faa_path.exists():
+                raise FileNotFoundError(f"Prokka ran but did not produce expected protein file at {prokka_faa_path}")
+
         raw_output_file = output_dir / f"{input_file.stem}_results_virulence_detailed_raw.tmp"
         
-        # Run BLASTn with custom 15-column format
+        # Run DIAMOND blastp with requested parameters
         cmd = [
-            blastn_cmd,
-            "-query", str(input_file),
-            "-db", str(db_prefix),
-            "-out", str(raw_output_file),
-            "-outfmt", "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen stitle",
-            "-num_threads", str(threads)
+            diamond_cmd,
+            "blastp",
+            "-q", str(prokka_faa_path),
+            "-d", str(db_prefix),
+            "-o", str(raw_output_file),
+            "--outfmt", "6", "qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore",
+            "--id", "80",
+            "--query-cover", "80",
+            "--subject-cover", "80",
+            "--max-target-seqs", "1",
+            "--threads", str(threads)
         ]
 
-        print(f"[{self.name.upper()}] Running blastn against VFDB database for {input_file.name}...")
+        print(f"[{self.name.upper()}] Running DIAMOND blastp against VFDB database for {input_file.name}...")
         try:
             run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
             
-            # Parse, filter, calculate coverage, and format output
-            print(f"[{self.name.upper()}] Filtering significant hits for {input_file.name}...")
-            filtered_lines = []
+            detailed_output_file = output_dir / f"{input_file.stem}.tsv"
+            headers = "Gene\tVFDB_Hit\tIdentity\tLength\tMismatch\tGap\tQstart\tQend\tSstart\tSend\tEvalue\tBitscore\n"
             
-            # Write header
-            filtered_lines.append("qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore\tqlen\tslen\tscov(%)\tproduct")
+            with open(detailed_output_file, "w", encoding="utf-8") as outfile:
+                outfile.write(headers)
+                if raw_output_file.exists():
+                    with open(raw_output_file, "r", encoding="utf-8", errors="replace") as infile:
+                        shutil.copyfileobj(infile, outfile)
             
+            # Clean up raw output file
             if raw_output_file.exists():
-                with open(raw_output_file, "r") as infile:
-                    for line in infile:
-                        parts = line.strip().split("\t")
-                        if len(parts) < 15:
-                            continue
-                        
-                        try:
-                            pident = float(parts[2])
-                            length = int(parts[3])
-                            evalue = float(parts[10])
-                            bitscore = float(parts[11])
-                            qlen = int(parts[12])
-                            slen = int(parts[13])
-                            
-                            # Re-join all fields from the 15th column onwards as product
-                            product = " ".join(parts[14:])
-                            
-                            # Coverage calculation: (alignment_length / query_length) * 100
-                            qcov = (length / qlen) * 100
-                            
-                            # Apply strict filter rules
-                            if pident >= 80.0 and qcov >= 80.0 and evalue <= 1e-5:
-                                formatted = f"{parts[0]}\t{parts[1]}\t{pident:.3f}\t{length}\t{parts[4]}\t{parts[5]}\t{parts[6]}\t{parts[7]}\t{parts[8]}\t{parts[9]}\t{evalue:.2e}\t{bitscore:.1f}\t{qlen}\t{slen}\t{qcov:.2f}\t{product}"
-                                filtered_lines.append(formatted)
-                        except ValueError:
-                            continue
-                
-                # Delete temporary raw file
                 raw_output_file.unlink()
-            
-            # Create the gene summary (cut -f2 | sort | uniq -c | sort -nr)
-            summary_output_file = output_dir / f"{input_file.stem}.txt"
-            from collections import Counter
-            sseqid_counts = Counter()
-            
-            # Skip header (index 0)
-            for line in filtered_lines[1:]:
-                parts = line.split("\t")
-                if len(parts) > 1:
-                    sseqid = parts[1]
-                    sseqid_counts[sseqid] += 1
-            
-            # Sort by count (descending), then by sseqid (ascending)
-            sorted_counts = sorted(sseqid_counts.items(), key=lambda x: (-x[1], x[0]))
-            
-            # Write summary file matching the 'uniq -c' formatting
-            with open(summary_output_file, "w") as sum_file:
-                for sseqid, count in sorted_counts:
-                    sum_file.write(f"{count:>7} {sseqid}\n")
-                    
-            print(f"[{self.name.upper()}] Virulence summary saved at: {summary_output_file}")
-            return summary_output_file
+                
+            print(f"[{self.name.upper()}] Virulence hits saved at: {detailed_output_file}")
+            return detailed_output_file
             
         except subprocess.CalledProcessError as e:
             if raw_output_file.exists():
@@ -209,12 +180,12 @@ class VfdbTool(BaseTool):
                     raw_output_file.unlink()
                 except Exception:
                     pass
-            print(f"[{self.name.upper()}] Error running blastn on {input_file.name}:")
+            print(f"[{self.name.upper()}] Error running DIAMOND blastp on {input_file.name}:")
             print(e.stderr or e.stdout)
             raise e
 
     def get_version(self) -> str:
-        cmd_path = self._resolve_blastn()
+        cmd_path = self._resolve_diamond()
         if not cmd_path:
             return "Not Installed"
-        return get_cmd_version([cmd_path], "-version")
+        return get_cmd_version([cmd_path], "version")
