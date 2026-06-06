@@ -23,13 +23,23 @@ class PipelineRunner:
         self.reference_parsnp = reference_parsnp
         
         if selected_tools:
-            # Filter and order tools according to user request
-            self.tools_to_run = []
-            for t in selected_tools:
-                if t in self.all_tools:
-                    self.tools_to_run.append(self.all_tools[t])
-                else:
-                    print(f"Warning: Tool '{t}' is not registered or found.")
+            # Normalize selected_tools to lowercase
+            selected_tools = [t.lower() for t in selected_tools]
+            
+            # Ensure 'prokka' is run if 'vfdb' is requested, since 'vfdb' depends on Prokka's protein output
+            if "vfdb" in selected_tools and "prokka" not in selected_tools:
+                selected_tools.append("prokka")
+
+            # Order tools dynamically based on preferred pipeline order
+            preferred_order = ["card", "prokka", "vfdb", "parsnp", "mashtree"]
+            ordered = []
+            for name in preferred_order:
+                if name in selected_tools and name in self.all_tools:
+                    ordered.append(self.all_tools[name])
+            for name in selected_tools:
+                if name not in preferred_order and name in self.all_tools and self.all_tools[name] not in ordered:
+                    ordered.append(self.all_tools[name])
+            self.tools_to_run = ordered
         else:
             # Default sequence: run all registered tools sequentially
             preferred_order = ["card", "prokka", "vfdb", "parsnp", "mashtree"]
