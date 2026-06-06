@@ -107,8 +107,8 @@ class TestSanBac(unittest.TestCase):
             
         mock_run.side_effect = create_tree_file
         
-        # We need parsnp to be marked installed
-        with patch.object(parsnp, "is_installed", return_value=True):
+        # We need parsnp to resolve to a fake executable
+        with patch.object(parsnp, "_resolve_cmd", return_value="parsnp"):
             result = parsnp.run(self.input_path, parsnp_outdir, threads=2)
             
         # Verify the tree is copied to the right location
@@ -142,8 +142,8 @@ class TestSanBac(unittest.TestCase):
             
         mock_run.side_effect = create_tree_file
         
-        # We need mashtree to be marked installed
-        with patch.object(mashtree, "is_installed", return_value=True):
+        # We need mashtree to resolve to a fake executable
+        with patch.object(mashtree, "_resolve_cmd", return_value="mashtree"):
             result = mashtree.run(self.input_path, mashtree_outdir, threads=2)
             
         # Verify the tree is created in the right location
@@ -187,7 +187,7 @@ class TestSanBac(unittest.TestCase):
                     return MagicMock(returncode=0)
                 mock_run.side_effect = create_rgi_outputs
                 
-                with patch.object(card, "is_installed", return_value=True):
+                with patch.object(card, "_resolve_cmd", return_value="rgi"):
                     result = card.run(query_file, self.output_path, threads=2)
                 
                 dest_csv = self.output_path / "query1.csv"

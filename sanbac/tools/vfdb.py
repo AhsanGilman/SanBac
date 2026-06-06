@@ -15,10 +15,16 @@ class VfdbTool(BaseTool):
     def description(self) -> str:
         return "VFDB (Virulence Factor Database) blastn alignment for identifying virulence factor genes"
 
+    def _resolve_blastn(self) -> str:
+        configured = config.get_executable("blastn")
+        return find_executable(configured)
+
+    def _resolve_makeblastdb(self) -> str:
+        configured = config.get_executable("makeblastdb")
+        return find_executable(configured)
+
     def is_installed(self) -> bool:
-        blastn_cmd = config.get_executable("blastn")
-        makeblastdb_cmd = config.get_executable("makeblastdb")
-        return find_executable(blastn_cmd) is not None and find_executable(makeblastdb_cmd) is not None
+        return self._resolve_blastn() is not None and self._resolve_makeblastdb() is not None
 
     def update_db(self) -> bool:
         if not self.is_installed():
@@ -107,7 +113,8 @@ class VfdbTool(BaseTool):
             return False
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
-        if not self.is_installed():
+        blastn_cmd = self._resolve_blastn()
+        if not blastn_cmd:
             raise FileNotFoundError("BLAST+ tools ('blastn' / 'makeblastdb') are not installed or not in PATH.")
 
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -121,7 +128,6 @@ class VfdbTool(BaseTool):
                 raise RuntimeError("Could not find or build VFDB database.")
 
         raw_output_file = output_dir / f"{input_file.stem}_results_virulence_detailed_raw.tmp"
-        blastn_cmd = config.get_executable("blastn")
         
         # Run BLASTn with custom 15-column format
         cmd = [
@@ -209,5 +215,7 @@ class VfdbTool(BaseTool):
             raise e
 
     def get_version(self) -> str:
-        blastn_cmd = config.get_executable("blastn")
-        return get_cmd_version([blastn_cmd], "-version")
+        cmd_path = self._resolve_blastn()
+        if not cmd_path:
+            return "Not Installed"
+        return get_cmd_version([cmd_path], "-version")

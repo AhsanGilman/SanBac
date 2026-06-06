@@ -13,12 +13,16 @@ class ProkkaTool(BaseTool):
     def description(self) -> str:
         return "Prokka (rapid prokaryotic genome annotation) for protein annotation and gene prediction"
 
+    def _resolve_cmd(self) -> str:
+        """Resolves the prokka executable path."""
+        configured = config.get_executable("prokka")
+        return find_executable(configured)
+
     def is_installed(self) -> bool:
-        prokka_cmd = config.get_executable("prokka")
-        return find_executable(prokka_cmd) is not None
+        return self._resolve_cmd() is not None
 
     def update_db(self) -> bool:
-        prokka_cmd = config.get_executable("prokka")
+        prokka_cmd = self._resolve_cmd()
         if not self.is_installed():
             print("Error: 'prokka' command not found. Please install Prokka first.")
             return False
@@ -40,8 +44,8 @@ class ProkkaTool(BaseTool):
             return True
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
-        prokka_cmd = config.get_executable("prokka")
-        if not self.is_installed():
+        prokka_cmd = self._resolve_cmd()
+        if not prokka_cmd:
             raise FileNotFoundError("Prokka is not installed or not in PATH.")
 
         # Save each sample's Prokka files to its own subfolder in the output_dir
@@ -66,5 +70,7 @@ class ProkkaTool(BaseTool):
             raise e
 
     def get_version(self) -> str:
-        prokka_cmd = config.get_executable("prokka")
-        return get_cmd_version([prokka_cmd], "--version")
+        cmd_path = self._resolve_cmd()
+        if not cmd_path:
+            return "Not Installed"
+        return get_cmd_version([cmd_path], "--version")

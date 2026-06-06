@@ -57,29 +57,61 @@ class BaseTool(ABC):
         pass
 
 def find_executable(cmd_name: str) -> str:
-    """Finds an executable in the system PATH or the current python environment's bin folder."""
+    """
+    Finds an executable by searching:
+    1. System PATH (shutil.which)
+    2. sys.prefix/bin/<cmd_name> (conda env bin)
+    3. sys.prefix/bin/<cmd_name>.pl (Perl scripts like mashtree)
+    4. Glob sys.prefix/bin/<cmd_name>* (catch any variant)
+    5. CONDA_PREFIX/bin/ (if different from sys.prefix)
+    Returns the full path string or None.
+    """
     import shutil
     import sys
-    from pathlib import Path
-    
-    # 1. Try standard shutil.which
+    import os
+
+    # 1. Standard PATH lookup
     p = shutil.which(cmd_name)
     if p:
         return p
-        
-    # 2. Try sys.prefix / "bin" / cmd_name
-    env_bin = Path(sys.prefix) / "bin" / cmd_name
-    import os
-    if os.name == 'nt':
-        for ext in ('.exe', '.bat', '.cmd'):
-            win_bin = Path(sys.prefix) / "bin" / f"{cmd_name}{ext}"
-            if win_bin.exists() and os.access(win_bin, os.X_OK):
-                return str(win_bin)
-    else:
-        if env_bin.exists() and os.access(env_bin, os.X_OK):
-            return str(env_bin)
-            
+
+    # Also try with .pl suffix via PATH
+    p = shutil.which(f"{cmd_name}.pl")
+    if p:
+        return p
+
+    # Collect candidate directories to search
+    bin_dirs = set()
+    bin_dirs.add(Path(sys.prefix) / "bin")
+    
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix:
+        bin_dirs.add(Path(conda_prefix) / "bin")
+
+    for bin_dir in bin_dirs:
+        if not bin_dir.is_dir():
+            continue
+
+        # 2. Exact name match
+        exact = bin_dir / cmd_name
+        if exact.exists():
+            return str(exact)
+
+        # 3. With .pl suffix
+        pl_variant = bin_dir / f"{cmd_name}.pl"
+        if pl_variant.exists():
+            return str(pl_variant)
+
+        # 4. Glob for any variant (e.g. mashtree_something)
+        try:
+            for candidate in sorted(bin_dir.glob(f"{cmd_name}*")):
+                if candidate.is_file():
+                    return str(candidate)
+        except Exception:
+            pass
+
     return None
+
 
 def get_cmd_version(cmd_list, version_arg="--version") -> str:
     """Helper function to run an external command and parse its version."""
@@ -88,9 +120,9 @@ def get_cmd_version(cmd_list, version_arg="--version") -> str:
         exec_path = find_executable(cmd_list[0])
         if not exec_path:
             return "Not Installed"
-        
-        full_cmd_list = [exec_path] + cmd_list[1:]
-        res = subprocess.run(full_cmd_list + [version_arg], capture_output=True, text=True, errors="replace", timeout=5)
+
+        cmd = [exec_path] + cmd_list[1:] + [version_arg]
+        res = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=5)
         output = (res.stdout or res.stderr or "").strip()
         if not output:
             return "Unknown"

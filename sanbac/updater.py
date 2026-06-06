@@ -34,7 +34,24 @@ def update_databases(tool_name: str = None) -> bool:
     return success
 
 def update_external_binaries() -> bool:
-    """Attempts to update external binaries like parsnp and mashtree via conda."""
+    """Attempts to install/update external binaries like parsnp and mashtree via conda."""
+    from .tools.base import find_executable
+
+    # Check which tools actually need installation
+    tools_to_install = []
+    tool_checks = {"parsnp": "parsnp", "mashtree": "mashtree"}
+    
+    for pkg_name, cmd_name in tool_checks.items():
+        if find_executable(cmd_name) is None:
+            tools_to_install.append(pkg_name)
+        else:
+            print(f"  {pkg_name}: already installed ({find_executable(cmd_name)})")
+
+    if not tools_to_install:
+        print("All external tools (parsnp, mashtree) are already installed.")
+        return True
+
+    # Find conda executable
     conda_path = os.environ.get("CONDA_EXE")
     
     if not conda_path or not Path(conda_path).exists():
@@ -64,16 +81,35 @@ def update_external_binaries() -> bool:
 
     if not conda_path:
         print("Conda executable not found on system path or common directories. Skipping external binary updates.")
+        print(f"Missing tools that need manual installation: {', '.join(tools_to_install)}")
         return False
 
-    print("Installing/updating parsnp and mashtree to latest bioconda versions...")
+    print(f"Installing missing tools: {', '.join(tools_to_install)}...")
     # Use -p sys.prefix to force installation into the active python environment
-    cmd = [conda_path, "install", "-y", "-p", sys.prefix, "-c", "bioconda", "-c", "conda-forge", "parsnp", "mashtree"]
+    cmd = [conda_path, "install", "-y", "-p", sys.prefix, "-c", "bioconda", "-c", "conda-forge"] + tools_to_install
     try:
         print(f"Running: {' '.join(cmd)}")
         result = subprocess.run(cmd, check=False)
         if result.returncode == 0:
             print("Conda install/update completed successfully.")
+            # Verify the install actually worked
+            still_missing = []
+            for pkg_name, cmd_name in tool_checks.items():
+                if pkg_name in tools_to_install and find_executable(cmd_name) is None:
+                    still_missing.append(pkg_name)
+            if still_missing:
+                print(f"Warning: The following tools were installed by conda but cannot be found: {', '.join(still_missing)}")
+                print(f"  Searched in: {sys.prefix}/bin/ and system PATH")
+                # List what files exist in bin/ matching these names
+                bin_dir = Path(sys.prefix) / "bin"
+                if bin_dir.is_dir():
+                    for pkg_name in still_missing:
+                        matches = list(bin_dir.glob(f"{pkg_name}*"))
+                        if matches:
+                            print(f"  Found files for '{pkg_name}': {[str(m) for m in matches]}")
+                        else:
+                            print(f"  No files matching '{pkg_name}*' found in {bin_dir}")
+                return False
             return True
         else:
             print(f"Notice: Conda install/update did not succeed (exit code {result.returncode}).")

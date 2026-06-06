@@ -17,9 +17,13 @@ class MashtreeTool(BaseTool):
     def run_per_file(self) -> bool:
         return False
 
+    def _resolve_cmd(self) -> str:
+        """Resolves the mashtree executable path."""
+        configured = config.get_executable("mashtree")
+        return find_executable(configured)
+
     def is_installed(self) -> bool:
-        mashtree_cmd = config.get_executable("mashtree")
-        return find_executable(mashtree_cmd) is not None
+        return self._resolve_cmd() is not None
 
     def update_db(self) -> bool:
         # Mashtree does not use a database to download/update
@@ -27,8 +31,8 @@ class MashtreeTool(BaseTool):
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
         # Note: input_file is actually the input directory containing genomes
-        mashtree_cmd = config.get_executable("mashtree")
-        if not self.is_installed():
+        mashtree_cmd = self._resolve_cmd()
+        if not mashtree_cmd:
             raise FileNotFoundError("Mashtree is not installed or not in PATH.")
 
         from ..pipeline import discover_fasta_files
@@ -68,5 +72,7 @@ class MashtreeTool(BaseTool):
             raise e
 
     def get_version(self) -> str:
-        mashtree_cmd = config.get_executable("mashtree")
-        return get_cmd_version([mashtree_cmd], "--version")
+        cmd_path = self._resolve_cmd()
+        if not cmd_path:
+            return "Not Installed"
+        return get_cmd_version([cmd_path], "--version")

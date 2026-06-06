@@ -20,9 +20,13 @@ class ParsnpTool(BaseTool):
     def run_per_file(self) -> bool:
         return False
 
+    def _resolve_cmd(self) -> str:
+        """Resolves the parsnp executable path."""
+        configured = config.get_executable("parsnp")
+        return find_executable(configured)
+
     def is_installed(self) -> bool:
-        parsnp_cmd = config.get_executable("parsnp")
-        return find_executable(parsnp_cmd) is not None
+        return self._resolve_cmd() is not None
 
     def update_db(self) -> bool:
         # Parsnp doesn't use a database to download/update
@@ -30,8 +34,8 @@ class ParsnpTool(BaseTool):
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
         # Note: input_file is actually the input directory containing genomes
-        parsnp_cmd = config.get_executable("parsnp")
-        if not self.is_installed():
+        parsnp_cmd = self._resolve_cmd()
+        if not parsnp_cmd:
             raise FileNotFoundError("Parsnp is not installed or not in PATH.")
 
         if not self.reference_parsnp:
@@ -111,10 +115,12 @@ class ParsnpTool(BaseTool):
                 print(f"Warning: Failed to clean up temporary directory {temp_query_dir}: {e}")
 
     def get_version(self) -> str:
-        parsnp_cmd = config.get_executable("parsnp")
-        v = get_cmd_version([parsnp_cmd], "--version")
+        cmd_path = self._resolve_cmd()
+        if not cmd_path:
+            return "Not Installed"
+        v = get_cmd_version([cmd_path], "--version")
         if v in ("Unknown", ""):
-            v = get_cmd_version([parsnp_cmd], "-h")
+            v = get_cmd_version([cmd_path], "-h")
             if v and v != "Not Installed" and v != "Unknown":
                 v = v.replace("|--", "").replace("--|", "").strip()
         return v

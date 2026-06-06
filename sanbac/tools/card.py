@@ -15,9 +15,13 @@ class CardTool(BaseTool):
     def description(self) -> str:
         return "CARD (Comprehensive Antibiotic Resistance Database) via RGI (Resistance Gene Identifier) for Antibiotic Resistance Genes (ARGs)"
 
+    def _resolve_cmd(self) -> str:
+        """Resolves the rgi executable path."""
+        configured = config.get_executable("rgi")
+        return find_executable(configured)
+
     def is_installed(self) -> bool:
-        rgi_cmd = config.get_executable("rgi")
-        return find_executable(rgi_cmd) is not None
+        return self._resolve_cmd() is not None
 
     def update_db(self) -> bool:
         if not self.is_installed():
@@ -140,8 +144,8 @@ class CardTool(BaseTool):
                 pass
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
-        rgi_cmd = config.get_executable("rgi")
-        if not self.is_installed():
+        rgi_cmd = self._resolve_cmd()
+        if not rgi_cmd:
             raise FileNotFoundError("RGI is not installed or not in PATH.")
 
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -195,5 +199,7 @@ class CardTool(BaseTool):
             raise e
 
     def get_version(self) -> str:
-        rgi_cmd = config.get_executable("rgi")
-        return get_cmd_version([rgi_cmd], "--version")
+        cmd_path = self._resolve_cmd()
+        if not cmd_path:
+            return "Not Installed"
+        return get_cmd_version([cmd_path], "--version")
