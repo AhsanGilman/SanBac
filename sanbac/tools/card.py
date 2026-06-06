@@ -94,12 +94,7 @@ class CardTool(BaseTool):
             print("Error: card.json not found in the extracted files.")
             return False
 
-    def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
-        rgi_cmd = config.get_executable("rgi")
-        if not self.is_installed():
-            raise FileNotFoundError("RGI is not installed or not in PATH.")
-
-        output_dir.mkdir(parents=True, exist_ok=True)
+    def before_run(self, output_dir: Path):
         db_source = config.db_dir / "card" / "localDB"
 
         # Check if database exists
@@ -132,6 +127,24 @@ class CardTool(BaseTool):
             except Exception as e:
                 print(f"Warning: Failed to copy localDB to current folder: {e}")
 
+    def after_run(self, output_dir: Path):
+        cwd = Path.cwd()
+        local_link = cwd / "localDB"
+        if local_link.exists() or local_link.is_symlink():
+            try:
+                if local_link.is_symlink():
+                    local_link.unlink()
+                else:
+                    shutil.rmtree(local_link)
+            except Exception:
+                pass
+
+    def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
+        rgi_cmd = config.get_executable("rgi")
+        if not self.is_installed():
+            raise FileNotFoundError("RGI is not installed or not in PATH.")
+
+        output_dir.mkdir(parents=True, exist_ok=True)
         output_prefix = output_dir / input_file.stem
         
         cmd = [
@@ -147,15 +160,6 @@ class CardTool(BaseTool):
         print(f"[{self.name.upper()}] Analyzing {input_file.name} with {threads} thread(s)...")
         try:
             subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
-            
-            # Clean up the link in the execution path
-            try:
-                if local_link.is_symlink():
-                    local_link.unlink()
-                else:
-                    shutil.rmtree(local_link)
-            except Exception:
-                pass
 
             txt_output = Path(f"{output_prefix}.txt")
             json_output = Path(f"{output_prefix}.json")
@@ -186,14 +190,6 @@ class CardTool(BaseTool):
 
             return csv_output
         except subprocess.CalledProcessError as e:
-            # Try to clean up local link on failure as well
-            try:
-                if local_link.is_symlink():
-                    local_link.unlink()
-                else:
-                    shutil.rmtree(local_link)
-            except Exception:
-                pass
             print(f"[{self.name.upper()}] Error running CARD/RGI on {input_file.name}:")
             print(e.stderr or e.stdout)
             raise e

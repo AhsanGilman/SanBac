@@ -152,5 +152,53 @@ class TestSanBac(unittest.TestCase):
         self.assertEqual(dest_tree.read_text(), "mashtree_content")
         self.assertEqual(result, dest_tree)
 
+    @patch("subprocess.run")
+    def test_card_tool_lifecycle(self, mock_run):
+        """Test CardTool before_run, run, and after_run lifecycle and symlink handling."""
+        tools = load_tools()
+        self.assertIn("card", tools)
+        card = tools["card"]
+        
+        orig_db_dir = config.db_dir
+        temp_db_dir = Path(self.test_dir) / "card_db_dir"
+        temp_db_dir.mkdir()
+        config.db_dir = temp_db_dir
+        
+        try:
+            db_source = temp_db_dir / "card" / "localDB"
+            db_source.mkdir(parents=True, exist_ok=True)
+            (db_source / "card.json").write_text("{}")
+            
+            mock_cwd = Path(self.test_dir) / "cwd"
+            mock_cwd.mkdir()
+            
+            with patch("pathlib.Path.cwd", return_value=mock_cwd):
+                with patch.object(card, "is_installed", return_value=True):
+                    card.before_run(self.output_path)
+                
+                local_link = mock_cwd / "localDB"
+                self.assertTrue(local_link.exists())
+                
+                query_file = self.input_path / "query1.fasta"
+                query_file.write_text(">query1\nCGTA\n")
+                
+                def create_rgi_outputs(*args, **kwargs):
+                    (self.output_path / "query1.txt").write_text("header1\theader2\nval1\tval2\n")
+                    return MagicMock(returncode=0)
+                mock_run.side_effect = create_rgi_outputs
+                
+                with patch.object(card, "is_installed", return_value=True):
+                    result = card.run(query_file, self.output_path, threads=2)
+                
+                dest_csv = self.output_path / "query1.csv"
+                self.assertTrue(dest_csv.exists())
+                self.assertEqual(result, dest_csv)
+                
+                card.after_run(self.output_path)
+                self.assertFalse(local_link.exists())
+                
+        finally:
+            config.db_dir = orig_db_dir
+
 if __name__ == "__main__":
     unittest.main()

@@ -73,41 +73,46 @@ class PipelineRunner:
                 tool_output_dir = output_path / tool.name
             tool_output_dir.mkdir(parents=True, exist_ok=True)
             
-            if not tool.run_per_file:
-                if tool.name == "parsnp":
-                    tool.reference_parsnp = self.reference_parsnp
-                    if not self.reference_parsnp:
-                        print(f"Skipping: {tool.name.upper()} (no reference FASTA path provided).")
-                        continue
+            try:
+                tool.before_run(tool_output_dir)
                 
-                print(f"Processing directory: {input_path} as a single run for {tool.name.upper()}")
-                try:
-                    result_path = tool.run(input_path, tool_output_dir, total_threads)
-                    print(f"Finished: {tool.name.upper()} on {input_path.name} -> Output at: {result_path}")
-                except Exception as exc:
-                    print(f"Error: {tool.name.upper()} failed on {input_path.name} with exception: {exc}")
-                continue
-
-            # Determine parallel files configuration:
-            # Divide threads evenly across files processed in parallel.
-            num_files = len(fasta_files)
-            concurrency = min(total_threads, num_files)
-            threads_per_file = max(1, total_threads // concurrency)
-            
-            print(f"Processing {num_files} file(s) with concurrency={concurrency} (threads_per_file={threads_per_file})")
-            
-            # Use ThreadPoolExecutor to process files in parallel
-            with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
-                futures = {}
-                for f in fasta_files:
-                    futures[executor.submit(tool.run, f, tool_output_dir, threads_per_file)] = f
+                if not tool.run_per_file:
+                    if tool.name == "parsnp":
+                        tool.reference_parsnp = self.reference_parsnp
+                        if not self.reference_parsnp:
+                            print(f"Skipping: {tool.name.upper()} (no reference FASTA path provided).")
+                            continue
                     
-                for future in concurrent.futures.as_completed(futures):
-                    fasta_file = futures[future]
+                    print(f"Processing directory: {input_path} as a single run for {tool.name.upper()}")
                     try:
-                        result_path = future.result()
-                        print(f"Finished: {tool.name.upper()} on {fasta_file.name} -> Output at: {result_path}")
+                        result_path = tool.run(input_path, tool_output_dir, total_threads)
+                        print(f"Finished: {tool.name.upper()} on {input_path.name} -> Output at: {result_path}")
                     except Exception as exc:
-                        print(f"Error: {tool.name.upper()} failed on {fasta_file.name} with exception: {exc}")
+                        print(f"Error: {tool.name.upper()} failed on {input_path.name} with exception: {exc}")
+                    continue
+
+                # Determine parallel files configuration:
+                # Divide threads evenly across files processed in parallel.
+                num_files = len(fasta_files)
+                concurrency = min(total_threads, num_files)
+                threads_per_file = max(1, total_threads // concurrency)
+                
+                print(f"Processing {num_files} file(s) with concurrency={concurrency} (threads_per_file={threads_per_file})")
+                
+                # Use ThreadPoolExecutor to process files in parallel
+                with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
+                    futures = {}
+                    for f in fasta_files:
+                        futures[executor.submit(tool.run, f, tool_output_dir, threads_per_file)] = f
+                        
+                    for future in concurrent.futures.as_completed(futures):
+                        fasta_file = futures[future]
+                        try:
+                            result_path = future.result()
+                            print(f"Finished: {tool.name.upper()} on {fasta_file.name} -> Output at: {result_path}")
+                        except Exception as exc:
+                            print(f"Error: {tool.name.upper()} failed on {fasta_file.name} with exception: {exc}")
+            finally:
+                tool.after_run(tool_output_dir)
                         
         print("\nPipeline execution completed.")

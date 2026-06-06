@@ -48,6 +48,14 @@ class BaseTool(ABC):
         """
         pass
 
+    def before_run(self, output_dir: Path):
+        """Optional hook executed before starting run/parallel processing."""
+        pass
+
+    def after_run(self, output_dir: Path):
+        """Optional hook executed after completing all run/parallel processing."""
+        pass
+
 def get_cmd_version(cmd_list, version_arg="--version") -> str:
     """Helper function to run an external command and parse its version."""
     import shutil
