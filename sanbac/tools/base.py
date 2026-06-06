@@ -88,20 +88,29 @@ def find_executable(cmd_name: str) -> str:
     if conda_prefix:
         bin_dirs.add(Path(conda_prefix) / "bin")
 
-    # Add isolated tools environment bin directory
+    # Add isolated tools environments bin directories
     try:
         from ..updater import get_tools_env_prefix
-        bin_dirs.add(get_tools_env_prefix() / "bin")
+        tools_base_dir = get_tools_env_prefix()
+        if tools_base_dir.is_dir():
+            for sub_dir in tools_base_dir.iterdir():
+                if sub_dir.is_dir() and (sub_dir / 'bin').is_dir():
+                    bin_dirs.add(sub_dir / "bin")
     except Exception:
         prefix = Path(sys.prefix)
         in_conda = os.environ.get('CONDA_PREFIX') is not None or (prefix / 'conda-meta').is_dir() or prefix.parent.name == 'envs'
         if in_conda:
             if prefix.parent.name == 'envs':
-                bin_dirs.add(prefix.parent / f"{prefix.name}-tools" / "bin")
+                tools_base = prefix.parent / f"{prefix.name}-tool-envs"
             else:
-                bin_dirs.add(prefix / "envs" / "sanbac-tools" / "bin")
+                tools_base = prefix / "envs" / "sanbac-tool-envs"
         else:
-            bin_dirs.add(Path.home() / ".sanbac" / "envs" / "sanbac-tools" / "bin")
+            tools_base = Path.home() / ".sanbac" / "envs" / "sanbac-tool-envs"
+            
+        if tools_base.is_dir():
+            for sub_dir in tools_base.iterdir():
+                if sub_dir.is_dir() and (sub_dir / 'bin').is_dir():
+                    bin_dirs.add(sub_dir / "bin")
 
     for bin_dir in bin_dirs:
         if not bin_dir.is_dir():

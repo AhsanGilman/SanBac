@@ -46,12 +46,12 @@ def get_tools_env_prefix() -> Path:
     
     if in_conda:
         if prefix.parent.name == 'envs':
-            return prefix.parent / f"{prefix.name}-tools"
+            return prefix.parent / f"{prefix.name}-tool-envs"
         else:
-            return prefix / "envs" / "sanbac-tools"
+            return prefix / "envs" / "sanbac-tool-envs"
             
     # Fallback for system python / non-conda: use user home directory to avoid permissions issues
-    return Path.home() / ".sanbac" / "envs" / "sanbac-tools"
+    return Path.home() / ".sanbac" / "envs" / "sanbac-tool-envs"
 
 
 def is_aarch64_system() -> bool:
@@ -166,10 +166,12 @@ def _apply_x86_64_ld_path():
         if env_lib_dir.is_dir():
             paths_to_add.append(str(env_lib_dir))
 
-    # 4. Isolated tools environment's lib dir
-    tools_lib_dir = get_tools_env_prefix() / 'lib'
-    if tools_lib_dir.is_dir():
-        paths_to_add.append(str(tools_lib_dir))
+    # 4. Isolated tools environment's lib dirs
+    tools_base_dir = get_tools_env_prefix()
+    if tools_base_dir.is_dir():
+        for sub_dir in tools_base_dir.iterdir():
+            if sub_dir.is_dir() and (sub_dir / 'lib').is_dir():
+                paths_to_add.append(str(sub_dir / 'lib'))
 
     current_ld = os.environ.get('LD_LIBRARY_PATH', '')
     current_ld_parts = [p.strip() for p in current_ld.split(':') if p.strip()]
@@ -190,8 +192,16 @@ def _create_conda_x86_64_activation_script():
     activate_dir = Path(sys.prefix) / 'etc' / 'conda' / 'activate.d'
     activate_script = activate_dir / 'x86_64_compat.sh'
 
-    # Get tools env lib dir
-    tools_lib_dir = get_tools_env_prefix() / 'lib'
+    # Get tools env lib dirs
+    tools_base_dir = get_tools_env_prefix()
+    tools_libs = []
+    if tools_base_dir.is_dir():
+        for sub_dir in tools_base_dir.iterdir():
+            if sub_dir.is_dir() and (sub_dir / 'lib').is_dir():
+                tools_libs.append(str(sub_dir / 'lib'))
+    tools_lib_str = ":".join(tools_libs)
+    if tools_lib_str:
+        tools_lib_str += ":"
 
     try:
         activate_dir.mkdir(parents=True, exist_ok=True)
@@ -199,13 +209,13 @@ def _create_conda_x86_64_activation_script():
         with open(activate_script, 'w') as f:
             f.write('#!/bin/sh\n')
             f.write(f'# Added by SanBac: x86_64 cross-arch library paths for aarch64 systems\n')
-            f.write(f'export LD_LIBRARY_PATH="{cross_lib_dir}:$CONDA_PREFIX/lib:{tools_lib_dir}:$LD_LIBRARY_PATH"\n')
+            f.write(f'export LD_LIBRARY_PATH="{cross_lib_dir}:$CONDA_PREFIX/lib:{tools_lib_str}$LD_LIBRARY_PATH"\n')
         os.chmod(str(activate_script), 0o755)
         print(f"Created/updated conda activation script: {activate_script}")
         print("  (After reactivating your conda env, mashtree will work automatically)")
     except Exception as e:
         print(f"Warning: Could not create/update conda activation script: {e}")
-        print(f"  You may need to manually run: export LD_LIBRARY_PATH={cross_lib_dir}:$CONDA_PREFIX/lib:{tools_lib_dir}:$LD_LIBRARY_PATH")
+        print(f"  You may need to manually run: export LD_LIBRARY_PATH={cross_lib_dir}:$CONDA_PREFIX/lib:{tools_lib_str}$LD_LIBRARY_PATH")
 
 
 def _print_manual_compat_instructions():
@@ -322,25 +332,36 @@ def update_external_binaries() -> bool:
         print(f"Missing tools that need manual installation: {', '.join(tools_to_install)}")
         return False
 
-    tools_env = get_tools_env_prefix()
-    action = "install"
-    specs = list(tools_to_install)
-    # If the conda-meta directory doesn't exist, we run "create" instead of "install"
-    if not (tools_env / "conda-meta").is_dir():
-        action = "create"
-        # Pin to standard CPython to prevent solver conflicts (like PyPy)
-        specs.append("python=3.9")
-
-    print(f"Installing missing tools in isolated environment: {', '.join(tools_to_install)}...")
-    cmd = [conda_path, action, "-y", "-p", str(tools_env), "-c", "conda-forge", "-c", "bioconda", "-c", "defaults"] + specs
-    try:
-        print(f"Running: {' '.join(cmd)}")
-        result = subprocess.run(cmd, check=False)
-        if result.returncode != 0:
-            print(f"Notice: Conda {action} did not succeed (exit code {result.returncode}).")
+    print(f"Installing missing tools in isolated environments: {', '.join(tools_to_install)}...")
+    tools_base = get_tools_env_prefix()
+    tools_base.mkdir(parents=True, exist_ok=True)
+    
+    for tool in tools_to_install:
+        tool_env = tools_base / tool
+        action = "install"
+        specs = [tool]
+        
+        if not (tool_env / "conda-meta").is_dir():
+            action = "create"
+            # Pin to standard CPython to prevent solver conflicts (like PyPy)
+            specs.append("python=3.9")
+            
+        if tool == "mashtree" and is_aarch64_system():
+            specs.append("libxcrypt")
+            
+        print(f"\n--- Installing {tool} ---")
+        cmd = [conda_path, action, "-y", "-p", str(tool_env), "-c", "conda-forge", "-c", "bioconda", "-c", "defaults"] + specs
+        try:
+            print(f"Running: {' '.join(cmd)}")
+            result = subprocess.run(cmd, check=False)
+            if result.returncode != 0:
+                print(f"Notice: Conda {action} did not succeed for {tool} (exit code {result.returncode}).")
+                return False
+        except Exception as e:
+            print(f"Notice: Failed to run conda install for {tool}: {e}")
             return False
             
-        print("Conda install/update completed successfully.")
+    print("\nConda install/update completed successfully.")
         
         # On aarch64 systems, set up x86_64 compatibility if needed
         _ensure_x86_64_compat()

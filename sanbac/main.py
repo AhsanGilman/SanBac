@@ -33,10 +33,12 @@ def _apply_aarch64_compat():
         if env_lib_dir.is_dir():
             paths_to_add.append(str(env_lib_dir))
 
-    # 4. Isolated tools environment's lib dir
-    tools_lib_dir = get_tools_env_prefix() / 'lib'
-    if tools_lib_dir.is_dir():
-        paths_to_add.append(str(tools_lib_dir))
+    # 4. Isolated tools environment's lib dirs
+    tools_base_dir = get_tools_env_prefix()
+    if tools_base_dir.is_dir():
+        for sub_dir in tools_base_dir.iterdir():
+            if sub_dir.is_dir() and (sub_dir / 'lib').is_dir():
+                paths_to_add.append(str(sub_dir / 'lib'))
 
     current_ld = os.environ.get('LD_LIBRARY_PATH', '')
     current_ld_parts = [p.strip() for p in current_ld.split(':') if p.strip()]
