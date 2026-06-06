@@ -58,7 +58,7 @@ class ProkkaTool(BaseTool):
         
         print(f"[{self.name.upper()}] Running Prokka annotation on {input_file.name}...")
         try:
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
             return sample_outdir
         except subprocess.CalledProcessError as e:
             print(f"[{self.name.upper()}] Error running Prokka on {input_file.name}:")

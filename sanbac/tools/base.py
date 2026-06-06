@@ -55,7 +55,7 @@ def get_cmd_version(cmd_list, version_arg="--version") -> str:
     try:
         if not shutil.which(cmd_list[0]):
             return "Not Installed"
-        res = subprocess.run([cmd_list[0], version_arg], capture_output=True, text=True, timeout=5)
+        res = subprocess.run([cmd_list[0], version_arg], capture_output=True, text=True, errors="replace", timeout=5)
         output = (res.stdout or res.stderr or "").strip()
         if not output:
             return "Unknown"

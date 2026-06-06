@@ -137,7 +137,9 @@ def update_tool_cmd(repo):
     if success:
         click.secho("Update process finished.", fg="green")
         click.echo("Updating analysis databases (CARD, VFDB) to match latest versions...")
-        update_databases()
+        import sys
+        import subprocess
+        subprocess.run([sys.executable, "-m", "sanbac.main", "update-db"])
     else:
         click.secho("Update process failed.", fg="red")
 

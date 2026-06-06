@@ -82,6 +82,7 @@ class CardTool(BaseTool):
                     cwd=str(local_db_dir),
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     check=True
                 )
                 print("RGI local database loaded successfully.")
@@ -145,7 +146,7 @@ class CardTool(BaseTool):
         
         print(f"[{self.name.upper()}] Analyzing {input_file.name} with {threads} thread(s)...")
         try:
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
             
             # Clean up the link in the execution path
             try:

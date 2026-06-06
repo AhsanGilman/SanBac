@@ -75,7 +75,7 @@ class VfdbTool(BaseTool):
             "-out", str(db_prefix)
         ]
         try:
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
             print("VFDB BLAST database built successfully.")
             return True
         except subprocess.CalledProcessError as e:
@@ -111,7 +111,7 @@ class VfdbTool(BaseTool):
 
         print(f"[{self.name.upper()}] Running blastn against VFDB database for {input_file.name}...")
         try:
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
             
             # Parse, filter, calculate coverage, and format output
             print(f"[{self.name.upper()}] Filtering significant hits for {input_file.name}...")
