@@ -146,7 +146,7 @@ class VfdbTool(BaseTool):
             "-q", str(prokka_faa_path),
             "-d", str(db_prefix),
             "-o", str(raw_output_file),
-            "--outfmt", "6", "qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore",
+            "--outfmt", "6", "qseqid", "sseqid", "salltitles", "pident", "qcovhsp", "evalue", "bitscore",
             "--id", "80",
             "--query-cover", "80",
             "--subject-cover", "80",
@@ -159,7 +159,7 @@ class VfdbTool(BaseTool):
             run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
             
             detailed_output_file = output_dir / f"{input_file.stem}.tsv"
-            headers = "Gene\tVFDB_Hit\tIdentity\tLength\tMismatch\tGap\tQstart\tQend\tSstart\tSend\tEvalue\tBitscore\n"
+            headers = "Query_Gene\tVFDB_ID\tVFDB_Description\tIdentity\tQuery_Coverage\tEvalue\tBitscore\n"
             
             with open(detailed_output_file, "w", encoding="utf-8") as outfile:
                 outfile.write(headers)
