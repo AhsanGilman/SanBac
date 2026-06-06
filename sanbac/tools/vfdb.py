@@ -34,62 +34,27 @@ class VfdbTool(BaseTool):
         fasta_file = vfdb_dir / "VFDB_setB_pro.fas"
         db_prefix = vfdb_dir / "vfdb"
 
-        urls_to_try = [
-            ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz", True),
-            ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz", True),
-            ("https://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas", False),
-            ("http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas", False),
-        ]
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-        }
-
-        success = False
-        for url, is_gzip in urls_to_try:
-            target_path = fasta_gz if is_gzip else fasta_file
-            print(f"Downloading VFDB database from {url}...")
-            try:
-                response = requests.get(url, headers=headers, stream=True, timeout=15)
-                if response.status_code == 200:
-                    total_size = int(response.headers.get('content-length', 0))
-                    downloaded = 0
-                    chunk_size = 1024 * 64
-                    with open(target_path, "wb") as f:
-                        for chunk in response.iter_content(chunk_size=chunk_size):
-                            if chunk:
-                                f.write(chunk)
-                                downloaded += len(chunk)
-                                if total_size > 0:
-                                    percent = (downloaded / total_size) * 100
-                                    if (downloaded // chunk_size) % 10 == 0:
-                                        print(f"  Downloaded: {downloaded / (1024 * 1024):.2f} MB / {total_size / (1024 * 1024):.2f} MB ({percent:.1f}%)", flush=True)
-                                else:
-                                    if (downloaded // chunk_size) % 10 == 0:
-                                        print(f"  Downloaded: {downloaded / (1024 * 1024):.2f} MB", flush=True)
-                    print("Download completed successfully.")
-                    success = True
-                    break
-                else:
-                    print(f"  HTTP status code: {response.status_code}. Trying next URL...")
-            except Exception as e:
-                print(f"  Error or timeout downloading from {url}: {e}. Trying next URL...")
-
-        if not success:
-            print("Error: All download attempts for VFDB database failed.")
+        url = "https://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz"
+        print(f"Downloading VFDB database from {url}...")
+        try:
+            response = requests.get(url, stream=True, timeout=30)
+            response.raise_for_status()
+            with open(fasta_gz, "wb") as f:
+                shutil.copyfileobj(response.raw, f)
+            print("Download completed successfully.")
+        except Exception as e:
+            print(f"Error downloading VFDB database: {e}")
             return False
 
-        # Extract if gzipped
-        if fasta_gz.exists():
-            print("Extracting VFDB_setB_pro.fas.gz...")
-            try:
-                with gzip.open(fasta_gz, 'rb') as f_in:
-                    with open(fasta_file, 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
-                fasta_gz.unlink()
-            except Exception as e:
-                print(f"Error extracting database file: {e}")
-                return False
+        print("Extracting VFDB_setB_pro.fas.gz...")
+        try:
+            with gzip.open(fasta_gz, 'rb') as f_in:
+                with open(fasta_file, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            fasta_gz.unlink()
+        except Exception as e:
+            print(f"Error extracting database file: {e}")
+            return False
 
         print("Building DIAMOND database for VFDB...")
         diamond_cmd = self._resolve_diamond()
@@ -137,7 +102,7 @@ class VfdbTool(BaseTool):
             if not prokka_faa_path.exists():
                 raise FileNotFoundError(f"Prokka ran but did not produce expected protein file at {prokka_faa_path}")
 
-        raw_output_file = output_dir / f"{input_file.stem}_results_virulence_detailed_raw.tmp"
+        detailed_output_file = output_dir / f"{input_file.stem}_results.tsv"
         
         # Run DIAMOND blastp with requested parameters
         cmd = [
@@ -145,7 +110,7 @@ class VfdbTool(BaseTool):
             "blastp",
             "-q", str(prokka_faa_path),
             "-d", str(db_prefix),
-            "-o", str(raw_output_file),
+            "-o", str(detailed_output_file),
             "--outfmt", "6", "qseqid", "sseqid", "salltitles", "pident", "qcovhsp", "evalue", "bitscore",
             "--id", "80",
             "--query-cover", "80",
@@ -158,28 +123,18 @@ class VfdbTool(BaseTool):
         try:
             run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
             
-            detailed_output_file = output_dir / f"{input_file.stem}_results.tsv"
-            headers = "Query_Gene\tVFDB_ID\tVFDB_Description\tIdentity\tQuery_Coverage\tEvalue\tBitscore\n"
-            
-            with open(detailed_output_file, "w", encoding="utf-8") as outfile:
-                outfile.write(headers)
-                if raw_output_file.exists():
-                    with open(raw_output_file, "r", encoding="utf-8", errors="replace") as infile:
-                        shutil.copyfileobj(infile, outfile)
-            
-            # Clean up raw output file
-            if raw_output_file.exists():
-                raw_output_file.unlink()
-                
+            # Add readable header (simulating sed -i '1i...')
+            if detailed_output_file.exists():
+                with open(detailed_output_file, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+                headers = "Query_Gene\tVFDB_ID\tVFDB_Description\tIdentity\tQuery_Coverage\tEvalue\tBitscore\n"
+                with open(detailed_output_file, "w", encoding="utf-8") as f:
+                    f.write(headers + content)
+                    
             print(f"[{self.name.upper()}] Virulence hits saved at: {detailed_output_file}")
             return detailed_output_file
             
         except subprocess.CalledProcessError as e:
-            if raw_output_file.exists():
-                try:
-                    raw_output_file.unlink()
-                except Exception:
-                    pass
             print(f"[{self.name.upper()}] Error running DIAMOND blastp on {input_file.name}:")
             print(e.stderr or e.stdout)
             raise e
