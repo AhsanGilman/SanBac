@@ -94,10 +94,14 @@ def find_executable(cmd_name: str) -> str:
         bin_dirs.add(get_tools_env_prefix() / "bin")
     except Exception:
         prefix = Path(sys.prefix)
-        if prefix.parent.name == 'envs':
-            bin_dirs.add(prefix.parent / f"{prefix.name}-tools" / "bin")
+        in_conda = os.environ.get('CONDA_PREFIX') is not None or (prefix / 'conda-meta').is_dir() or prefix.parent.name == 'envs'
+        if in_conda:
+            if prefix.parent.name == 'envs':
+                bin_dirs.add(prefix.parent / f"{prefix.name}-tools" / "bin")
+            else:
+                bin_dirs.add(prefix / "envs" / "sanbac-tools" / "bin")
         else:
-            bin_dirs.add(prefix / "envs" / "sanbac-tools" / "bin")
+            bin_dirs.add(Path.home() / ".sanbac" / "envs" / "sanbac-tools" / "bin")
 
     for bin_dir in bin_dirs:
         if not bin_dir.is_dir():

@@ -192,6 +192,17 @@ def update_tool_cmd(repo):
     else:
         click.secho("Update process failed.", fg="red")
 
+@main.command("install-tools")
+def install_tools_cmd():
+    """Install or update external bioinformatics tools (parsnp, mashtree) via conda."""
+    click.echo("Checking/installing external tool dependencies (parsnp, mashtree)...")
+    from .updater import update_external_binaries
+    success = update_external_binaries()
+    if success:
+        click.secho("External tools installed successfully and are ready to use.", fg="green")
+    else:
+        click.secho("Failed to install or verify one or more external tools.", fg="red")
+
 @main.command("config")
 @click.option("--db-dir", type=click.Path(file_okay=False, dir_okay=True, path_type=Path), help="Change database storage folder.")
 @click.option("--exec-name", type=str, help="Specify executable name to override (e.g. 'rgi', 'blastn').")

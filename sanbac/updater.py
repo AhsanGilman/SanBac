@@ -36,10 +36,22 @@ def update_databases(tool_name: str = None) -> bool:
 def get_tools_env_prefix() -> Path:
     """Gets the path of the isolated conda environment for external tools."""
     prefix = Path(sys.prefix)
-    if prefix.parent.name == 'envs':
-        return prefix.parent / f"{prefix.name}-tools"
-    else:
-        return prefix / "envs" / "sanbac-tools"
+    
+    # Check if we are in a conda environment
+    in_conda = (
+        os.environ.get('CONDA_PREFIX') is not None or
+        (prefix / 'conda-meta').is_dir() or
+        prefix.parent.name == 'envs'
+    )
+    
+    if in_conda:
+        if prefix.parent.name == 'envs':
+            return prefix.parent / f"{prefix.name}-tools"
+        else:
+            return prefix / "envs" / "sanbac-tools"
+            
+    # Fallback for system python / non-conda: use user home directory to avoid permissions issues
+    return Path.home() / ".sanbac" / "envs" / "sanbac-tools"
 
 
 def is_aarch64_system() -> bool:
