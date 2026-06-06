@@ -93,15 +93,11 @@ class ParsnpTool(BaseTool):
                 print(result.stderr or result.stdout)
                 raise subprocess.CalledProcessError(result.returncode, cmd, output=result.stdout, stderr=result.stderr)
             
-            # Create Phylogenetic tree directory
-            phylo_dir = output_dir.parent / "Phylogenetic tree"
-            phylo_dir.mkdir(parents=True, exist_ok=True)
-            
             parsnp_tree = output_dir / "parsnp.tree"
-            dest_tree = phylo_dir / "presnp_treee.tree"
+            dest_tree = output_dir / "presnp_treee.tree"
             
             if parsnp_tree.exists():
-                shutil.copy(parsnp_tree, dest_tree)
+                shutil.move(parsnp_tree, dest_tree)
                 print(f"[{self.name.upper()}] Phylogenetic tree saved at: {dest_tree}")
                 return dest_tree
             else:

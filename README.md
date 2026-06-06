@@ -147,12 +147,11 @@ results/
 │   └── sample2/
 │       ├── sample2.gff
 │       └── sample2.faa
-├── parsnp/               # Parsnp raw output directory
-│   ├── parsnp.xmfa       # Core alignment
-│   ├── parsnp.snps.mblocks # SNP signatures
-│   └── parsnp.tree       # Resulting phylogeny
 └── Phylogenetic tree/
-    └── presnp_treee.tree # Final phylogenetic tree copy
+    └── parsnp/           # Parsnp outputs (grouped by phylogenetic tool)
+        ├── parsnp.xmfa       # Core alignment
+        ├── parsnp.snps.mblocks # SNP signatures
+        └── presnp_treee.tree # Resulting phylogeny (renamed)
 ```
 
 ### 3. Self-Updating

@@ -71,7 +71,10 @@ class PipelineRunner:
                 print(f"Error: {tool.name.upper()} is not installed on this system. Skipping.")
                 continue
                 
-            tool_output_dir = output_path / tool.name
+            if tool.name == "parsnp":
+                tool_output_dir = output_path / "Phylogenetic tree" / "parsnp"
+            else:
+                tool_output_dir = output_path / tool.name
             tool_output_dir.mkdir(parents=True, exist_ok=True)
             
             if not tool.run_per_file:
