@@ -299,12 +299,15 @@ def update_external_binaries() -> bool:
 
     tools_env = get_tools_env_prefix()
     action = "install"
+    specs = list(tools_to_install)
     # If the conda-meta directory doesn't exist, we run "create" instead of "install"
     if not (tools_env / "conda-meta").is_dir():
         action = "create"
+        # Pin to standard CPython to prevent solver conflicts (like PyPy)
+        specs.append("python=3.10")
 
     print(f"Installing missing tools in isolated environment: {', '.join(tools_to_install)}...")
-    cmd = [conda_path, action, "-y", "-p", str(tools_env), "-c", "bioconda", "-c", "conda-forge"] + tools_to_install
+    cmd = [conda_path, action, "-y", "-p", str(tools_env), "-c", "bioconda", "-c", "conda-forge"] + specs
     try:
         print(f"Running: {' '.join(cmd)}")
         result = subprocess.run(cmd, check=False)
