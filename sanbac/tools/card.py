@@ -3,7 +3,7 @@ import subprocess
 import requests
 import tarfile
 from pathlib import Path
-from .base import BaseTool, get_cmd_version
+from .base import BaseTool, get_cmd_version, find_executable
 from ..config import config
 
 class CardTool(BaseTool):
@@ -17,7 +17,7 @@ class CardTool(BaseTool):
 
     def is_installed(self) -> bool:
         rgi_cmd = config.get_executable("rgi")
-        return shutil.which(rgi_cmd) is not None
+        return find_executable(rgi_cmd) is not None
 
     def update_db(self) -> bool:
         if not self.is_installed():

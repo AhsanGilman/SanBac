@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import requests
 from pathlib import Path
-from .base import BaseTool, get_cmd_version
+from .base import BaseTool, get_cmd_version, find_executable
 from ..config import config
 
 class VfdbTool(BaseTool):
@@ -18,7 +18,7 @@ class VfdbTool(BaseTool):
     def is_installed(self) -> bool:
         blastn_cmd = config.get_executable("blastn")
         makeblastdb_cmd = config.get_executable("makeblastdb")
-        return shutil.which(blastn_cmd) is not None and shutil.which(makeblastdb_cmd) is not None
+        return find_executable(blastn_cmd) is not None and find_executable(makeblastdb_cmd) is not None
 
     def update_db(self) -> bool:
         if not self.is_installed():

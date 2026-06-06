@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
-from .base import BaseTool, get_cmd_version
+from .base import BaseTool, get_cmd_version, find_executable
 from ..config import config
 
 class ProkkaTool(BaseTool):
@@ -15,7 +15,7 @@ class ProkkaTool(BaseTool):
 
     def is_installed(self) -> bool:
         prokka_cmd = config.get_executable("prokka")
-        return shutil.which(prokka_cmd) is not None
+        return find_executable(prokka_cmd) is not None
 
     def update_db(self) -> bool:
         prokka_cmd = config.get_executable("prokka")

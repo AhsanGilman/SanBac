@@ -56,14 +56,41 @@ class BaseTool(ABC):
         """Optional hook executed after completing all run/parallel processing."""
         pass
 
+def find_executable(cmd_name: str) -> str:
+    """Finds an executable in the system PATH or the current python environment's bin folder."""
+    import shutil
+    import sys
+    from pathlib import Path
+    
+    # 1. Try standard shutil.which
+    p = shutil.which(cmd_name)
+    if p:
+        return p
+        
+    # 2. Try sys.prefix / "bin" / cmd_name
+    env_bin = Path(sys.prefix) / "bin" / cmd_name
+    import os
+    if os.name == 'nt':
+        for ext in ('.exe', '.bat', '.cmd'):
+            win_bin = Path(sys.prefix) / "bin" / f"{cmd_name}{ext}"
+            if win_bin.exists() and os.access(win_bin, os.X_OK):
+                return str(win_bin)
+    else:
+        if env_bin.exists() and os.access(env_bin, os.X_OK):
+            return str(env_bin)
+            
+    return None
+
 def get_cmd_version(cmd_list, version_arg="--version") -> str:
     """Helper function to run an external command and parse its version."""
-    import shutil
     import subprocess
     try:
-        if not shutil.which(cmd_list[0]):
+        exec_path = find_executable(cmd_list[0])
+        if not exec_path:
             return "Not Installed"
-        res = subprocess.run([cmd_list[0], version_arg], capture_output=True, text=True, errors="replace", timeout=5)
+        
+        full_cmd_list = [exec_path] + cmd_list[1:]
+        res = subprocess.run(full_cmd_list + [version_arg], capture_output=True, text=True, errors="replace", timeout=5)
         output = (res.stdout or res.stderr or "").strip()
         if not output:
             return "Unknown"

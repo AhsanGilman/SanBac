@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
-from .base import BaseTool, get_cmd_version
+from .base import BaseTool, get_cmd_version, find_executable
 from ..config import config
 
 class MashtreeTool(BaseTool):
@@ -19,7 +19,7 @@ class MashtreeTool(BaseTool):
 
     def is_installed(self) -> bool:
         mashtree_cmd = config.get_executable("mashtree")
-        return shutil.which(mashtree_cmd) is not None
+        return find_executable(mashtree_cmd) is not None
 
     def update_db(self) -> bool:
         # Mashtree does not use a database to download/update

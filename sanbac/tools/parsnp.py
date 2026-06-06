@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
-from .base import BaseTool, get_cmd_version
+from .base import BaseTool, get_cmd_version, find_executable
 from ..config import config
 
 class ParsnpTool(BaseTool):
@@ -22,7 +22,7 @@ class ParsnpTool(BaseTool):
 
     def is_installed(self) -> bool:
         parsnp_cmd = config.get_executable("parsnp")
-        return shutil.which(parsnp_cmd) is not None
+        return find_executable(parsnp_cmd) is not None
 
     def update_db(self) -> bool:
         # Parsnp doesn't use a database to download/update
