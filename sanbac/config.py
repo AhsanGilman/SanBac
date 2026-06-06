@@ -15,7 +15,8 @@ class Config:
             "blastn": "blastn",
             "makeblastdb": "makeblastdb",
             "prokka": "prokka",
-            "parsnp": "parsnp"
+            "parsnp": "parsnp",
+            "mashtree": "mashtree"
         }
         self.load()
 

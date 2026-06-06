@@ -117,5 +117,40 @@ class TestSanBac(unittest.TestCase):
         self.assertEqual(dest_tree.read_text(), "tree_content")
         self.assertEqual(result, dest_tree)
 
+    @patch("subprocess.run")
+    def test_mashtree_tool_run(self, mock_run):
+        """Test MashtreeTool.run execution, file query passing, output, and cleanup."""
+        tools = load_tools()
+        self.assertIn("mashtree", tools)
+        mashtree = tools["mashtree"]
+        self.assertEqual(mashtree.name, "mashtree")
+        self.assertFalse(mashtree.run_per_file)
+        
+        query_file = self.input_path / "query1.fasta"
+        query_file.write_text(">query1\nCGTA\n")
+        
+        # Set up mock command execution
+        mock_run.return_value = MagicMock(returncode=0)
+        
+        # Create dummy output folder and mashtree.dnd to mock success
+        mashtree_outdir = self.output_path / "Phylogenetic tree" / "mashtree"
+        
+        def create_tree_file(*args, **kwargs):
+            mashtree_outdir.mkdir(parents=True, exist_ok=True)
+            (mashtree_outdir / "mashtree.dnd").write_text("mashtree_content")
+            return MagicMock(returncode=0)
+            
+        mock_run.side_effect = create_tree_file
+        
+        # We need mashtree to be marked installed
+        with patch.object(mashtree, "is_installed", return_value=True):
+            result = mashtree.run(self.input_path, mashtree_outdir, threads=2)
+            
+        # Verify the tree is created in the right location
+        dest_tree = mashtree_outdir / "mashtree.dnd"
+        self.assertTrue(dest_tree.exists())
+        self.assertEqual(dest_tree.read_text(), "mashtree_content")
+        self.assertEqual(result, dest_tree)
+
 if __name__ == "__main__":
     unittest.main()

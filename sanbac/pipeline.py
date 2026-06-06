@@ -41,7 +41,7 @@ class PipelineRunner:
                     ordered.append(self.all_tools[name])
             for name, tool in self.all_tools.items():
                 if name not in preferred_order:
-                    if name == "parsnp":
+                    if name in ("parsnp", "mashtree"):
                         continue
                     ordered.append(tool)
             self.tools_to_run = ordered
@@ -71,8 +71,8 @@ class PipelineRunner:
                 print(f"Error: {tool.name.upper()} is not installed on this system. Skipping.")
                 continue
                 
-            if tool.name == "parsnp":
-                tool_output_dir = output_path / "Phylogenetic tree" / "parsnp"
+            if tool.name in ("parsnp", "mashtree"):
+                tool_output_dir = output_path / "Phylogenetic tree" / tool.name
             else:
                 tool_output_dir = output_path / tool.name
             tool_output_dir.mkdir(parents=True, exist_ok=True)

@@ -10,6 +10,7 @@ By default, the pipeline runs the following tools in order:
 2. **VFDB** (Virulence Factor Database) — via blastn to screen for virulence factors.
 3. **Prokka** — to execute rapid prokaryotic genome annotation (protein coding genes, tRNA, rRNA).
 4. **Parsnp** (optional) — to perform core genome alignment and construct a phylogenetic tree (automatically appended to the default list if `--reference-parsnp` is supplied).
+5. **Mashtree** (optional) — to perform alignment-free phylogenetic tree generation based on Mash distances (runs if selected via `--tools mashtree`).
 
 The architecture is highly extensible, allowing you to easily add new tools (e.g. tools 4, 5, 6) simply by adding a Python script.
 
@@ -148,10 +149,12 @@ results/
 │       ├── sample2.gff
 │       └── sample2.faa
 └── Phylogenetic tree/
-    └── parsnp/           # Parsnp outputs (grouped by phylogenetic tool)
-        ├── parsnp.xmfa       # Core alignment
-        ├── parsnp.snps.mblocks # SNP signatures
-        └── presnp_treee.tree # Resulting phylogeny (renamed)
+    ├── parsnp/           # Parsnp outputs (grouped by phylogenetic tool)
+    │   ├── parsnp.xmfa       # Core alignment
+    │   ├── parsnp.snps.mblocks # SNP signatures
+    │   └── presnp_treee.tree # Resulting phylogeny (renamed)
+    └── mashtree/         # Mashtree outputs
+        └── mashtree.dnd      # Mash distance-based tree (Newick format)
 ```
 
 ### 3. Self-Updating
