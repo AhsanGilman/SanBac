@@ -41,15 +41,15 @@ def update_external_binaries() -> bool:
         print("Conda not found on system path. Skipping external binary updates.")
         return False
 
-    print("Checking/updating parsnp and mashtree to latest bioconda versions...")
-    cmd = [conda_path, "update", "-y", "-c", "bioconda", "parsnp", "mashtree"]
+    print("Installing/updating parsnp and mashtree to latest bioconda versions...")
+    cmd = [conda_path, "install", "-y", "-c", "bioconda", "parsnp", "mashtree"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
-            print("Conda update check completed successfully.")
+            print("Conda install/update completed successfully.")
             return True
         else:
-            print("Notice: Conda update did not succeed (e.g. packages may not be installed in the active environment).")
+            print("Notice: Conda install/update did not succeed (e.g. packages may not be available in this environment).")
             return False
     except Exception as e:
         print(f"Notice: Failed to run conda update: {e}")
