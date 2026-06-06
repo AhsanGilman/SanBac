@@ -51,12 +51,6 @@ conda env create -f sanbac.yml
 conda activate sanbac
 ```
 
-*(Alternative: You can create the environment directly from GitHub without cloning first)*:
-```bash
-conda env create -f https://raw.githubusercontent.com/AhsanGilman/SanBac/main/sanbac.yml
-conda activate sanbac
-```
-
 ### 3. Install SanBac CLI
 With the conda environment active, install the CLI:
 
@@ -73,13 +67,6 @@ source ~/.bashrc
 ### 🚨 Ubuntu / ARM64 (aarch64) Native Installation
 If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`.
 
-#### Clean Re-creation (If you previously ran into `externally-managed-environment` errors)
-If you already created a partial `sanbac` environment, remove it first to start clean:
-```bash
-conda deactivate
-conda env remove -n sanbac -y
-```
-
 #### Step-by-Step Installation:
 ```bash
 # 1. Install system bioinformatics tools via apt
@@ -91,6 +78,7 @@ conda create -n sanbac python=3.9 pip -y
 conda activate sanbac
 
 # 3. Install RGI (CARD) and SanBac using python's module invocation to bypass any shell path caching
+git clone https://github.com/AhsanGilman/SanBac.git
 cd ~/SanBac
 python -m pip install --upgrade pip setuptools
 python -m pip install git+https://github.com/arpcard/rgi.git
