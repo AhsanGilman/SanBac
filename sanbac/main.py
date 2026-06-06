@@ -113,8 +113,8 @@ def main():
 @click.option(
     "--tools",
     type=str,
-    default=None,
-    help="Comma-separated list of tools to run (e.g. 'card,prokka' or 'all'). By default, runs all tools."
+    required=True,
+    help="Comma-separated list of tools to run (e.g. 'card,prokka' or 'all')."
 )
 @click.option(
     "--reference-parsnp",

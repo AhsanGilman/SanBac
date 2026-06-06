@@ -115,9 +115,9 @@ sanbac update-db
 *Note: The VFDB database will be downloaded and built automatically if you try to run the pipeline without it.*
 
 ### 3. Run the Pipeline
-To run the default annotation tools (CARD, VFDB, Prokka) on a folder containing `.fasta` or `.fna` files:
+To run the annotation tools (CARD, VFDB, Prokka) on a folder containing `.fasta` or `.fna` files:
 ```bash
-sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8
+sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools card,vfdb,prokka
 ```
 
 ### 4. Run All Tools
@@ -151,7 +151,7 @@ COMMAND OPTIONS
     -i, --input-dir DIRECTORY Path to the import folder containing FNA/FASTA files. [Required]
     -o, --output-dir DIRECTORY Path to the output folder where analysis results will be saved. [Required]
     -t, --threads INTEGER     Total threads/CPU cores to allocate to the run. [Default: 4]
-    --tools TEXT              Comma-separated list of tools to run (e.g. 'card,prokka,parsnp,mashtree' or 'all').
+    --tools TEXT              Comma-separated list of tools to run (e.g. 'card,prokka,parsnp,mashtree' or 'all'). [Required]
     --reference-parsnp FILE   Path to the reference FASTA/FNA file for Parsnp.
 
   config Options:
