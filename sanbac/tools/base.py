@@ -80,22 +80,24 @@ def find_executable(cmd_name: str) -> str:
     if p:
         return p
 
-    # Collect candidate directories to search
-    bin_dirs = set()
-    bin_dirs.add(Path(sys.prefix) / "bin")
+    # Collect candidate directories to search in priority order
+    bin_dirs = []
     
-    conda_prefix = os.environ.get("CONDA_PREFIX")
-    if conda_prefix:
-        bin_dirs.add(Path(conda_prefix) / "bin")
-
-    # Add isolated tools environments bin directories
+    # Map command name to its dedicated tool environment folder name
+    tool_env_map = {
+        "diamond": "diamond",
+        "rgi": "rgi",
+        "prokka": "prokka",
+        "parsnp": "parsnp",
+        "mashtree": "mashtree"
+    }
+    
+    # 1. Primary priority: check the dedicated tool environment directory first
+    dedicated_env = tool_env_map.get(cmd_name.lower())
+    tools_base = None
     try:
         from ..updater import get_tools_env_prefix
-        tools_base_dir = get_tools_env_prefix()
-        if tools_base_dir.is_dir():
-            for sub_dir in tools_base_dir.iterdir():
-                if sub_dir.is_dir() and (sub_dir / 'bin').is_dir():
-                    bin_dirs.add(sub_dir / "bin")
+        tools_base = get_tools_env_prefix()
     except Exception:
         prefix = Path(sys.prefix)
         in_conda = os.environ.get('CONDA_PREFIX') is not None or (prefix / 'conda-meta').is_dir() or prefix.parent.name == 'envs'
@@ -106,11 +108,34 @@ def find_executable(cmd_name: str) -> str:
                 tools_base = prefix / "envs" / "sanbac-tool-envs"
         else:
             tools_base = Path.home() / ".sanbac" / "envs" / "sanbac-tool-envs"
-            
-        if tools_base.is_dir():
-            for sub_dir in tools_base.iterdir():
+
+    if dedicated_env and tools_base and tools_base.is_dir():
+        dedicated_bin = tools_base / dedicated_env / "bin"
+        if dedicated_bin.is_dir():
+            bin_dirs.append(dedicated_bin)
+
+    # 2. Secondary priority: check other isolated tools environments bin directories
+    if tools_base and tools_base.is_dir():
+        try:
+            for sub_dir in sorted(tools_base.iterdir()):
                 if sub_dir.is_dir() and (sub_dir / 'bin').is_dir():
-                    bin_dirs.add(sub_dir / "bin")
+                    bin_dir_path = sub_dir / "bin"
+                    if bin_dir_path not in bin_dirs:
+                        bin_dirs.append(bin_dir_path)
+        except Exception:
+            pass
+
+    # 3. Tertiary priority: Active Conda environment bin
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix:
+        conda_bin = Path(conda_prefix) / "bin"
+        if conda_bin not in bin_dirs:
+            bin_dirs.append(conda_bin)
+
+    # 4. Quaternary priority: Sys prefix bin
+    sys_bin = Path(sys.prefix) / "bin"
+    if sys_bin not in bin_dirs:
+        bin_dirs.append(sys_bin)
 
     for bin_dir in bin_dirs:
         if not bin_dir.is_dir():
