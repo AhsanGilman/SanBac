@@ -137,16 +137,118 @@ def find_executable(cmd_name: str) -> str:
     return None
 
 
+def run_subprocess(cmd, **kwargs):
+    """
+    Runs a subprocess command, automatically resolving the executable's path
+    and prepending its conda bin directory (and other tool bin directories)
+    to PATH to ensure dependent libraries and binaries (like perl/python) are found.
+    On aarch64, it also configures LD_LIBRARY_PATH compatibility.
+    """
+    import os
+    import sys
+    import subprocess
+    from pathlib import Path
+
+    # 1. Resolve executable's full path if it is a registered tool
+    exe = cmd[0]
+    resolved_exe = find_executable(exe)
+    if resolved_exe:
+        cmd[0] = resolved_exe
+        exe_dir = Path(resolved_exe).parent
+    else:
+        # If not a registered tool or we couldn't resolve it, use the original executable name.
+        exe_dir = None
+
+    # 2. Build environment dictionary
+    env = kwargs.get("env")
+    if env is None:
+        env = os.environ.copy()
+    else:
+        env = env.copy()
+
+    # Determine tool bin directories to add to PATH
+    bin_dirs = []
+    if exe_dir:
+        bin_dirs.append(str(exe_dir.resolve()))
+
+    # Gather other tool bin directories under the tools environment prefix
+    try:
+        from ..updater import get_tools_env_prefix
+        tools_base_dir = get_tools_env_prefix()
+        if tools_base_dir.is_dir():
+            for sub_dir in tools_base_dir.iterdir():
+                if sub_dir.is_dir() and (sub_dir / 'bin').is_dir():
+                    path_str = str((sub_dir / 'bin').resolve())
+                    if path_str not in bin_dirs:
+                        bin_dirs.append(path_str)
+    except Exception:
+        # In case of circular import issues or if updater is not importable
+        pass
+
+    # Prepend bin directories to PATH
+    current_path = env.get("PATH", "")
+    path_sep = ";" if os.name == "nt" else ":"
+    current_path_parts = [p.strip() for p in current_path.split(path_sep) if p.strip()]
+    
+    new_path_parts = bin_dirs + [p for p in current_path_parts if p not in bin_dirs]
+    env["PATH"] = path_sep.join(new_path_parts)
+
+    # 3. Handle aarch64 LD_LIBRARY_PATH compatibility if on an aarch64 machine
+    try:
+        from ..updater import is_aarch64_system
+        if is_aarch64_system():
+            paths_to_add = []
+            
+            # Cross-architecture libraries
+            cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
+            if Path(cross_lib_dir).is_dir():
+                paths_to_add.append(cross_lib_dir)
+                
+            # Current Python conda environment
+            conda_lib_dir = Path(sys.prefix) / 'lib'
+            if conda_lib_dir.is_dir():
+                paths_to_add.append(str(conda_lib_dir.resolve()))
+                
+            # CONDA_PREFIX
+            conda_prefix = os.environ.get('CONDA_PREFIX')
+            if conda_prefix:
+                env_lib_dir = Path(conda_prefix) / 'lib'
+                if env_lib_dir.is_dir():
+                    paths_to_add.append(str(env_lib_dir.resolve()))
+                    
+            # Specific executing tool lib
+            if exe_dir:
+                lib_dir = exe_dir.parent / "lib"
+                if lib_dir.is_dir():
+                    paths_to_add.append(str(lib_dir.resolve()))
+                    
+            # All other tools lib
+            for b_dir in bin_dirs:
+                lib_dir = Path(b_dir).parent / "lib"
+                if lib_dir.is_dir() and str(lib_dir.resolve()) not in paths_to_add:
+                    paths_to_add.append(str(lib_dir.resolve()))
+
+            current_ld = env.get('LD_LIBRARY_PATH', '')
+            current_ld_parts = [p.strip() for p in current_ld.split(':') if p.strip()]
+            
+            new_ld_parts = paths_to_add + [p for p in current_ld_parts if p not in paths_to_add]
+            env['LD_LIBRARY_PATH'] = ':'.join(new_ld_parts)
+    except Exception:
+        pass
+
+    kwargs["env"] = env
+    return subprocess.run(cmd, **kwargs)
+
+
 def get_cmd_version(cmd_list, version_arg="--version") -> str:
     """Helper function to run an external command and parse its version."""
-    import subprocess
     try:
         exec_path = find_executable(cmd_list[0])
         if not exec_path:
             return "Not Installed"
 
         cmd = [exec_path] + cmd_list[1:] + [version_arg]
-        res = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=5)
+        res = run_subprocess(cmd, capture_output=True, text=True, errors="replace", timeout=5)
         output = (res.stdout or res.stderr or "").strip()
         if not output:
             return "Unknown"

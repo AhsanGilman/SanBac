@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import requests
 from pathlib import Path
-from .base import BaseTool, get_cmd_version, find_executable
+from .base import BaseTool, get_cmd_version, find_executable, run_subprocess
 from ..config import config
 
 class VfdbTool(BaseTool):
@@ -96,7 +96,7 @@ class VfdbTool(BaseTool):
                 return False
 
         print("Building BLAST database for VFDB...")
-        makeblastdb_cmd = config.get_executable("makeblastdb")
+        makeblastdb_cmd = self._resolve_makeblastdb() or config.get_executable("makeblastdb")
         cmd = [
             makeblastdb_cmd,
             "-in", str(fasta_file),
@@ -104,7 +104,7 @@ class VfdbTool(BaseTool):
             "-out", str(db_prefix)
         ]
         try:
-            subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
+            run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
             print("VFDB BLAST database built successfully.")
             return True
         except subprocess.CalledProcessError as e:
@@ -140,7 +140,7 @@ class VfdbTool(BaseTool):
 
         print(f"[{self.name.upper()}] Running blastn against VFDB database for {input_file.name}...")
         try:
-            subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
+            run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
             
             # Parse, filter, calculate coverage, and format output
             print(f"[{self.name.upper()}] Filtering significant hits for {input_file.name}...")

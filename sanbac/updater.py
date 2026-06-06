@@ -230,7 +230,8 @@ def _print_manual_compat_instructions():
 def _verify_tool_runs(cmd_path: str) -> bool:
     """Check if a tool binary actually runs (not just exists)."""
     try:
-        result = subprocess.run(
+        from .tools.base import run_subprocess
+        result = run_subprocess(
             [cmd_path, '--version'],
             capture_output=True, text=True, errors='replace', timeout=10
         )

@@ -3,7 +3,7 @@ import subprocess
 import requests
 import tarfile
 from pathlib import Path
-from .base import BaseTool, get_cmd_version, find_executable
+from .base import BaseTool, get_cmd_version, find_executable, run_subprocess
 from ..config import config
 
 class CardTool(BaseTool):
@@ -78,10 +78,10 @@ class CardTool(BaseTool):
         
         if card_json.exists():
             print(f"Found card.json at {card_json}. Loading local database into RGI...")
-            rgi_cmd = config.get_executable("rgi")
+            rgi_cmd = self._resolve_cmd() or config.get_executable("rgi")
             try:
                 # Run rgi load --card_json ... --local inside local_db_dir
-                subprocess.run(
+                run_subprocess(
                     [rgi_cmd, "load", "--card_json", str(card_json), "--local"],
                     cwd=str(local_db_dir),
                     capture_output=True,
@@ -163,7 +163,7 @@ class CardTool(BaseTool):
         
         print(f"[{self.name.upper()}] Analyzing {input_file.name} with {threads} thread(s)...")
         try:
-            subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
+            run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
 
             txt_output = Path(f"{output_prefix}.txt")
             json_output = Path(f"{output_prefix}.json")

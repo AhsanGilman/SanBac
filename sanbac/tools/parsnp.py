@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
-from .base import BaseTool, get_cmd_version, find_executable
+from .base import BaseTool, get_cmd_version, find_executable, run_subprocess
 from ..config import config
 
 class ParsnpTool(BaseTool):
@@ -91,7 +91,7 @@ class ParsnpTool(BaseTool):
         print(f"[{self.name.upper()}] Running Parsnp core genome alignment...")
         try:
             # Run the command
-            result = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
+            result = run_subprocess(cmd, capture_output=True, text=True, errors="replace")
             if result.returncode != 0:
                 print(f"[{self.name.upper()}] Error running Parsnp:")
                 print(result.stderr or result.stdout)

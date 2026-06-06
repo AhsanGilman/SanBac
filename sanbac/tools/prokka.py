@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
-from .base import BaseTool, get_cmd_version, find_executable
+from .base import BaseTool, get_cmd_version, find_executable, run_subprocess
 from ..config import config
 
 class ProkkaTool(BaseTool):
@@ -29,7 +29,7 @@ class ProkkaTool(BaseTool):
         
         print("Setting up Prokka databases (if writable)...")
         try:
-            result = subprocess.run(
+            result = run_subprocess(
                 [prokka_cmd, "--setupdb"],
                 capture_output=True,
                 text=True
@@ -62,7 +62,7 @@ class ProkkaTool(BaseTool):
         
         print(f"[{self.name.upper()}] Running Prokka annotation on {input_file.name}...")
         try:
-            subprocess.run(cmd, capture_output=True, text=True, errors="replace", check=True)
+            run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
             return sample_outdir
         except subprocess.CalledProcessError as e:
             print(f"[{self.name.upper()}] Error running Prokka on {input_file.name}:")
