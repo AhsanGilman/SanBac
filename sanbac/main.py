@@ -10,14 +10,40 @@ from .config import config, CONFIG_FILE
 
 def _apply_aarch64_compat():
     """On aarch64 systems, ensure x86_64 cross-architecture libraries are in LD_LIBRARY_PATH."""
+    import sys
     if platform.machine() != 'aarch64':
         return
+        
+    paths_to_add = []
+    
+    # 1. Cross-architecture library dir
     cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
-    if not Path(cross_lib_dir).is_dir():
-        return
+    if Path(cross_lib_dir).is_dir():
+        paths_to_add.append(cross_lib_dir)
+        
+    # 2. Active Python conda environment's lib dir (contains libxcrypt/libcrypt.so.1)
+    conda_lib_dir = Path(sys.prefix) / 'lib'
+    if conda_lib_dir.is_dir():
+        paths_to_add.append(str(conda_lib_dir))
+
+    # 3. Environment variable CONDA_PREFIX lib dir
+    conda_prefix = os.environ.get('CONDA_PREFIX')
+    if conda_prefix:
+        env_lib_dir = Path(conda_prefix) / 'lib'
+        if env_lib_dir.is_dir():
+            paths_to_add.append(str(env_lib_dir))
+
     current_ld = os.environ.get('LD_LIBRARY_PATH', '')
-    if cross_lib_dir not in current_ld:
-        os.environ['LD_LIBRARY_PATH'] = f"{cross_lib_dir}:{current_ld}" if current_ld else cross_lib_dir
+    current_ld_parts = [p.strip() for p in current_ld.split(':') if p.strip()]
+
+    added_any = False
+    for path in paths_to_add:
+        if path not in current_ld_parts:
+            current_ld_parts.insert(0, path)
+            added_any = True
+
+    if added_any:
+        os.environ['LD_LIBRARY_PATH'] = ':'.join(current_ld_parts)
 
 
 # Apply at import time so all subprocess calls inherit the correct LD_LIBRARY_PATH

@@ -107,14 +107,41 @@ def _ensure_x86_64_compat() -> bool:
 
 
 def _apply_x86_64_ld_path():
-    """Add x86_64 cross-lib directory to LD_LIBRARY_PATH for the current process."""
-    cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
-    if not Path(cross_lib_dir).is_dir():
+    """Add x86_64 cross-lib directory and conda environment lib directory to LD_LIBRARY_PATH for the current process."""
+    import platform
+    if platform.machine() != 'aarch64':
         return
+
+    paths_to_add = []
+    
+    # 1. Cross-architecture library dir
+    cross_lib_dir = '/usr/x86_64-linux-gnu/lib'
+    if Path(cross_lib_dir).is_dir():
+        paths_to_add.append(cross_lib_dir)
+        
+    # 2. Active Python conda environment's lib dir
+    conda_lib_dir = Path(sys.prefix) / 'lib'
+    if conda_lib_dir.is_dir():
+        paths_to_add.append(str(conda_lib_dir))
+
+    # 3. Environment variable CONDA_PREFIX lib dir
+    conda_prefix = os.environ.get('CONDA_PREFIX')
+    if conda_prefix:
+        env_lib_dir = Path(conda_prefix) / 'lib'
+        if env_lib_dir.is_dir():
+            paths_to_add.append(str(env_lib_dir))
+
     current_ld = os.environ.get('LD_LIBRARY_PATH', '')
-    if cross_lib_dir not in current_ld:
-        new_ld = f"{cross_lib_dir}:{current_ld}" if current_ld else cross_lib_dir
-        os.environ['LD_LIBRARY_PATH'] = new_ld
+    current_ld_parts = [p.strip() for p in current_ld.split(':') if p.strip()]
+
+    added_any = False
+    for path in paths_to_add:
+        if path not in current_ld_parts:
+            current_ld_parts.insert(0, path)
+            added_any = True
+
+    if added_any:
+        os.environ['LD_LIBRARY_PATH'] = ':'.join(current_ld_parts)
 
 
 def _create_conda_x86_64_activation_script():
@@ -123,21 +150,19 @@ def _create_conda_x86_64_activation_script():
     activate_dir = Path(sys.prefix) / 'etc' / 'conda' / 'activate.d'
     activate_script = activate_dir / 'x86_64_compat.sh'
 
-    if activate_script.exists():
-        return  # Already created
-
     try:
         activate_dir.mkdir(parents=True, exist_ok=True)
+        # Always overwrite or write to ensure the latest LD_LIBRARY_PATH contents are present
         with open(activate_script, 'w') as f:
             f.write('#!/bin/sh\n')
-            f.write(f'# Added by SanBac: x86_64 cross-arch library path for aarch64 systems\n')
-            f.write(f'export LD_LIBRARY_PATH="{cross_lib_dir}:$LD_LIBRARY_PATH"\n')
+            f.write(f'# Added by SanBac: x86_64 cross-arch library paths for aarch64 systems\n')
+            f.write(f'export LD_LIBRARY_PATH="{cross_lib_dir}:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"\n')
         os.chmod(str(activate_script), 0o755)
-        print(f"Created conda activation script: {activate_script}")
+        print(f"Created/updated conda activation script: {activate_script}")
         print("  (After reactivating your conda env, mashtree will work automatically)")
     except Exception as e:
-        print(f"Warning: Could not create conda activation script: {e}")
-        print(f"  You may need to manually run: export LD_LIBRARY_PATH={cross_lib_dir}:$LD_LIBRARY_PATH")
+        print(f"Warning: Could not create/update conda activation script: {e}")
+        print(f"  You may need to manually run: export LD_LIBRARY_PATH={cross_lib_dir}:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH")
 
 
 def _print_manual_compat_instructions():
@@ -156,11 +181,22 @@ def _verify_tool_runs(cmd_path: str) -> bool:
             [cmd_path, '--version'],
             capture_output=True, text=True, errors='replace', timeout=10
         )
-        # Even non-zero exit is OK (some tools return 1 for --version)
-        # We just need to make sure it didn't fail with a linker/exec error
         combined = (result.stdout or '') + (result.stderr or '')
-        if 'ld-linux-x86-64.so.2' in combined or 'No such file or directory' in combined:
+        
+        # Check specifically for shared library / linker / dynamic link issues
+        linker_errors = [
+            'error while loading shared libraries',
+            'cannot open shared object file',
+            'ld-linux-x86-64.so.2'
+        ]
+        for err in linker_errors:
+            if err in combined:
+                return False
+                
+        # If execution fails with shell missing binary or loader issues
+        if 'No such file or directory' in combined and ('error' in combined or 'failed' in combined or result.returncode != 0):
             return False
+            
         return True
     except Exception:
         return False
@@ -169,6 +205,11 @@ def _verify_tool_runs(cmd_path: str) -> bool:
 def update_external_binaries() -> bool:
     """Attempts to install/update external binaries like parsnp and mashtree via conda."""
     from .tools.base import find_executable
+    import platform
+
+    # On aarch64 systems, set up x86_64 compatibility first
+    # so we can verify if existing packages can run correctly
+    _ensure_x86_64_compat()
 
     # Check which tools actually need installation
     tools_to_install = []
@@ -183,6 +224,12 @@ def update_external_binaries() -> bool:
             tools_to_install.append(pkg_name)
         else:
             print(f"  {pkg_name}: already installed ({exe_path})")
+
+    # If on aarch64 and mashtree is being installed/updated, install libxcrypt
+    # to supply the required x86_64 libcrypt.so.1 inside the conda environment
+    is_aarch64 = (platform.machine() == 'aarch64')
+    if is_aarch64 and "mashtree" in tools_to_install:
+        tools_to_install.append("libxcrypt")
 
     if not tools_to_install:
         print("All external tools (parsnp, mashtree) are already installed and working.")
