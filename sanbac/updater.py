@@ -406,8 +406,9 @@ def update_external_binaries() -> bool:
 def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
     """
     Attempts to update the tool.
-    If it's running inside a git clone (editable install), it runs `git pull`.
+    If it's running inside a git clone (editable install), it runs `git pull` (with stash/pop protection).
     Otherwise, it runs `pip install --upgrade git+<repo_url>`.
+    Also automatically runs `pip install -e .` to handle setup.py changes.
     """
     print(f"Checking for SanBac updates from repository: {repo_url}")
     
@@ -418,6 +419,21 @@ def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
     if git_dir.exists():
         print("Detected local git repository. Pulling latest code via 'git pull'...")
         try:
+            # 1. Check for local modifications to prevent git pull conflicts
+            status_check = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=str(package_dir),
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            has_local_changes = bool(status_check.stdout.strip())
+            
+            if has_local_changes:
+                print("Local modifications detected. Stashing changes temporarily...")
+                subprocess.run(["git", "stash"], cwd=str(package_dir), check=True)
+            
+            # 2. Pull the latest commits
             result = subprocess.run(
                 ["git", "pull"],
                 cwd=str(package_dir),
@@ -426,11 +442,25 @@ def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
                 check=True
             )
             print(result.stdout)
-            print("Successfully updated. Please reinstall if setup.py requirements changed.")
+            
+            # 3. Restore any local modifications
+            if has_local_changes:
+                print("Re-applying local changes (popping stash)...")
+                subprocess.run(["git", "stash", "pop"], cwd=str(package_dir), check=False)
+            
+            # 4. Automatically run pip install to update dependencies in case setup.py changed
+            print("Updating Python package dependencies...")
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-e", "."],
+                cwd=str(package_dir),
+                check=False
+            )
+            
+            # 5. Run tool environment updates / checks in a clean subprocess
             subprocess.run([sys.executable, "-m", "sanbac.main", "install-tools"])
             return True
         except subprocess.CalledProcessError as e:
-            print(f"Git pull failed: {e.stderr or e.stdout}")
+            print(f"Git pull/update failed: {e.stderr or e.stdout}")
             print("Falling back to pip upgrade...")
             
     # Run pip upgrade
