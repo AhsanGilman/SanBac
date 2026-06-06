@@ -5,12 +5,12 @@
 
 **SanBac** is a professional, modular, and multithreaded bacterial genomics analysis pipeline in Python. It provides a simple command-line interface (CLI) to automatically run a suite of annotation and screening tools sequentially on an entire directory of genome sequences (FASTA/FNA formats). 
 
-By default, the pipeline runs the following tools in order:
+By default, the pipeline runs the following tools in order (skipping any tool that is not installed on your system):
 1. **CARD** (Comprehensive Antibiotic Resistance Database) — via RGI (Resistance Gene Identifier) to identify antibiotic resistance genes (ARGs).
 2. **VFDB** (Virulence Factor Database) — via blastn to screen for virulence factors.
 3. **Prokka** — to execute rapid prokaryotic genome annotation (protein coding genes, tRNA, rRNA).
-4. **Parsnp** (optional) — to perform core genome alignment and construct a phylogenetic tree (automatically appended to the default list if `--reference-parsnp` is supplied).
-5. **Mashtree** (optional) — to perform alignment-free phylogenetic tree generation based on Mash distances (runs if selected via `--tools mashtree`).
+4. **Parsnp** — to perform core genome alignment and construct a phylogenetic tree (requires `--reference-parsnp`).
+5. **Mashtree** — to perform alignment-free phylogenetic tree generation based on Mash distances.
 
 The architecture is highly extensible, allowing you to easily add new tools (e.g. tools 4, 5, 6) simply by adding a Python script.
 

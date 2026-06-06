@@ -60,7 +60,7 @@ class TestSanBac(unittest.TestCase):
 
         runner_default = PipelineRunner()
         names = [t.name for t in runner_default.tools_to_run]
-        self.assertListEqual(names, ["card", "vfdb", "prokka"])
+        self.assertListEqual(names, ["card", "vfdb", "prokka", "parsnp", "mashtree"])
 
     def test_parsnp_plugin_discovery_and_properties(self):
         """Test that Parsnp is discovered and implements properties correctly."""
@@ -77,7 +77,7 @@ class TestSanBac(unittest.TestCase):
         
         runner = PipelineRunner(reference_parsnp=ref_file)
         names = [t.name for t in runner.tools_to_run]
-        self.assertListEqual(names, ["card", "vfdb", "prokka", "parsnp"])
+        self.assertListEqual(names, ["card", "vfdb", "prokka", "parsnp", "mashtree"])
 
     @patch("subprocess.run")
     def test_parsnp_tool_run(self, mock_run):

@@ -31,18 +31,14 @@ class PipelineRunner:
                 else:
                     print(f"Warning: Tool '{t}' is not registered or found.")
         else:
-            # Default sequence: first run preferred core tools, then any other plugins
-            preferred_order = ["card", "vfdb", "prokka"]
-            if self.reference_parsnp and "parsnp" in self.all_tools:
-                preferred_order.append("parsnp")
+            # Default sequence: run all registered tools sequentially
+            preferred_order = ["card", "vfdb", "prokka", "parsnp", "mashtree"]
             ordered = []
             for name in preferred_order:
                 if name in self.all_tools:
                     ordered.append(self.all_tools[name])
             for name, tool in self.all_tools.items():
                 if name not in preferred_order:
-                    if name in ("parsnp", "mashtree"):
-                        continue
                     ordered.append(tool)
             self.tools_to_run = ordered
 
@@ -68,7 +64,7 @@ class PipelineRunner:
             print(f"==================================================")
             
             if not tool.is_installed():
-                print(f"Error: {tool.name.upper()} is not installed on this system. Skipping.")
+                print(f"Skipping: {tool.name.upper()} is not installed on this system.")
                 continue
                 
             if tool.name in ("parsnp", "mashtree"):
@@ -81,7 +77,7 @@ class PipelineRunner:
                 if tool.name == "parsnp":
                     tool.reference_parsnp = self.reference_parsnp
                     if not self.reference_parsnp:
-                        print(f"Error: Reference FASTA path is required for {tool.name.upper()}. Use --reference-parsnp option. Skipping.")
+                        print(f"Skipping: {tool.name.upper()} (no reference FASTA path provided).")
                         continue
                 
                 print(f"Processing directory: {input_path} as a single run for {tool.name.upper()}")
