@@ -362,28 +362,25 @@ def update_external_binaries() -> bool:
             return False
             
     print("\nConda install/update completed successfully.")
+    
+    # On aarch64 systems, set up x86_64 compatibility if needed
+    _ensure_x86_64_compat()
+    
+    # Verify the install actually worked
+    still_broken = []
+    for pkg_name, cmd_name in tool_checks.items():
+        exe_path = find_executable(cmd_name)
+        if exe_path is None:
+            still_broken.append((pkg_name, "not found"))
+        elif not _verify_tool_runs(exe_path):
+            still_broken.append((pkg_name, "found but cannot execute"))
         
-        # On aarch64 systems, set up x86_64 compatibility if needed
-        _ensure_x86_64_compat()
-        
-        # Verify the install actually worked
-        still_broken = []
-        for pkg_name, cmd_name in tool_checks.items():
-            exe_path = find_executable(cmd_name)
-            if exe_path is None:
-                still_broken.append((pkg_name, "not found"))
-            elif not _verify_tool_runs(exe_path):
-                still_broken.append((pkg_name, "found but cannot execute"))
-            
-        if still_broken:
-            print(f"\nWarning: Some tools are still not working after installation:")
-            for pkg_name, reason in still_broken:
-                print(f"  {pkg_name}: {reason}")
-            return False
-        return True
-    except Exception as e:
-        print(f"Notice: Failed to run conda install: {e}")
+    if still_broken:
+        print(f"\nWarning: Some tools are still not working after installation:")
+        for pkg_name, reason in still_broken:
+            print(f"  {pkg_name}: {reason}")
         return False
+    return True
 
 
 def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
