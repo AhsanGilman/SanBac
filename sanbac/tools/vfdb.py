@@ -158,7 +158,7 @@ class VfdbTool(BaseTool):
         try:
             run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
             
-            detailed_output_file = output_dir / f"{input_file.stem}.tsv"
+            detailed_output_file = output_dir / f"{input_file.stem}_results.tsv"
             headers = "Query_Gene\tVFDB_ID\tVFDB_Description\tIdentity\tQuery_Coverage\tEvalue\tBitscore\n"
             
             with open(detailed_output_file, "w", encoding="utf-8") as outfile:
