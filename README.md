@@ -30,27 +30,15 @@ The architecture is highly extensible, allowing you to easily add new tools (e.g
 
 To make installation simple, follow these steps in order:
 
-### 1. Clone the Repository & Change Directory
+### 1. Installation
 Clone the repository to your machine and move into the project folder:
 
 ```bash
 git clone https://github.com/AhsanGilman/SanBac.git
 cd SanBac
-```
-
-### 2. Create the Conda Environment
-Creating the main conda environment is fast and platform-agnostic, as it only installs python and basic python packages. It works out of the box on Windows, Linux, and macOS:
-
-```bash
 # Create the environment using the local file
 conda env create -f sanbac.yml
 conda activate sanbac
-```
-
-### 3. Install SanBac CLI
-With the conda environment active, install the CLI:
-
-```bash
 python -m pip install -e .
 ```
 
