@@ -47,7 +47,7 @@ echo "alias sanbac='python -m sanbac.main'" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-### 4. Install External Bioinformatics Tools
+### Install External Bioinformatics Tools
 
 ```bash
 sanbac install-tools
