@@ -97,13 +97,10 @@ sanbac update-db
 ```bash
 sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools card,vfdb,prokka
 ```
-
 ### 4. Run All Tools
-To run all available annotation and phylogenetic tools (CARD, VFDB, Prokka, Parsnp, and Mashtree) at the same time:
 ```bash
 sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools all --reference-parsnp /path/to/reference.fasta
 ```
-
 #### Usage:
 ```
 Usage: sanbac [OPTIONS] COMMAND [ARGS]...
@@ -188,7 +185,6 @@ sanbac update-tool
 ```
 *   If running inside a git checkout, this executes `git pull`.
 *   Otherwise, it upgrades the python package using `pip`.
-
 ---
 
 ## Adding Custom Tools (Plugins)
