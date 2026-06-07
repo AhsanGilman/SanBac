@@ -84,20 +84,16 @@ source ~/.bashrc
 ## Usage Guide
 
 ### 1. View Available Tools
-Check the status of registered tools and see if their command-line dependencies are found on your system path:
 ```bash
 sanbac list-tools
 ```
-
 ### 2. Download and Update Databases
-Download the latest versions of databases (CARD, VFDB) and index them:
 ```bash
 sanbac update-db
 ```
 *Note: The VFDB database will be downloaded and built automatically if you try to run the pipeline without it.*
 
-### 3. Run the Pipeline
-To run the annotation tools (CARD, VFDB, Prokka) on a folder containing `.fasta` or `.fna` files:
+### 3. Run
 ```bash
 sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools card,vfdb,prokka
 ```
@@ -108,7 +104,7 @@ To run all available annotation and phylogenetic tools (CARD, VFDB, Prokka, Pars
 sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools all --reference-parsnp /path/to/reference.fasta
 ```
 
-#### Full CLI Usage Reference:
+#### Usage:
 ```
 Usage: sanbac [OPTIONS] COMMAND [ARGS]...
 
