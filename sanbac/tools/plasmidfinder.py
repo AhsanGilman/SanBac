@@ -51,13 +51,15 @@ class PlasmidfinderTool(BaseTool):
                 print("Updating PlasmidFinder program...")
                 run_subprocess(["git", "pull"], cwd=str(pf_dir), check=True)
             
-            # Patch pyproject.toml to allow Python 3.9 if it requires 3.10
+            # Patch pyproject.toml to allow Python 3.9 and fix cgecore requirement
             pyproject_file = pf_dir / "pyproject.toml"
             if pyproject_file.exists():
                 content = pyproject_file.read_text(errors="replace")
                 if 'requires-python = ">=3.10"' in content:
                     content = content.replace('requires-python = ">=3.10"', 'requires-python = ">=3.9"')
-                    pyproject_file.write_text(content)
+                if '"cgecore>=1.5.5"' in content:
+                    content = content.replace('"cgecore>=1.5.5"', '"cgecore>=2.0.0"')
+                pyproject_file.write_text(content)
             
             # 2. Install plasmidfinder as a Python package from the cloned repo
             print("Installing PlasmidFinder Python package...")
