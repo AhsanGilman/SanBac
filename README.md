@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
 
-**SanBac** is a professional, modular, and multithreaded bacterial genomics analysis pipeline in Python. It provides a simple command-line interface (CLI) to automatically run a suite of annotation and screening tools sequentially on an entire directory of genome sequences (FASTA/FNA formats). 
+**SanBac** is a bacterial genomics analysis pipeline in Python. It provides a simple command-line interface (CLI) to automatically run a suite of annotation and screening tools sequentially on an entire directory of genome sequences (FASTA/FNA formats). 
 
 By default, the pipeline runs the following tools in order (skipping any tool that is not installed on your system):
 1. **CARD** (Comprehensive Antibiotic Resistance Database) — via RGI (Resistance Gene Identifier) to identify antibiotic resistance genes (ARGs).
