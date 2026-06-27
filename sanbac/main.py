@@ -74,7 +74,7 @@ def print_version(ctx, param, value):
         click.echo(f"  Error loading tools: {e}")
     ctx.exit()
 
-@click.group()
+@click.group(context_settings=dict(max_content_width=120))
 @click.option(
     "--version",
     is_flag=True,
@@ -90,7 +90,7 @@ def main():
     """
     pass
 
-@main.command("run")
+@main.command("run", short_help="Scan the input folder for FASTA files and run selected genomics analysis tools.")
 @click.option(
     "-i", "--input-dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
@@ -135,7 +135,7 @@ def run_pipeline(input_dir: Path, output_dir: Path, threads: int, tools: str, re
         click.secho(f"Pipeline error: {e}", fg="red", err=True)
         raise click.Abort()
 
-@main.command("list-tools")
+@main.command("list-tools", short_help="List all registered and available tool plugins.")
 def list_tools():
     """List all registered and available tool plugins."""
     click.echo("Scanning for available tools...")
@@ -156,7 +156,7 @@ def list_tools():
         click.secho(status, fg=fg_color)
         click.echo("-" * 60)
 
-@main.command("update-db")
+@main.command("update-db", short_help="Download or update databases used by the analysis tools (e.g. CARD, VFDB).")
 @click.option(
     "--tool",
     type=str,
@@ -172,7 +172,7 @@ def update_db_cmd(tool, only_installed):
     else:
         click.secho("\nOne or more database updates failed.", fg="yellow")
 
-@main.command("update-tool")
+@main.command("update-tool", short_help="Self-update the SanBac pipeline code to the latest version from GitHub.")
 @click.option(
     "--repo",
     type=str,
@@ -191,7 +191,7 @@ def update_tool_cmd(repo):
     else:
         click.secho("Update process failed.", fg="red")
 
-@main.command("install-tools")
+@main.command("install-tools", short_help="Install external bioinformatics tools via conda (e.g. 'sanbac install-tools prokka').")
 @click.argument("tool", required=False)
 def install_tools_cmd(tool):
     """Install external bioinformatics tools via conda (e.g. 'sanbac install-tools prokka')."""
@@ -207,7 +207,7 @@ def install_tools_cmd(tool):
     else:
         click.secho("Failed to install or verify one or more external tools.", fg="red")
 
-@main.command("config")
+@main.command("config", short_help="View or modify configuration parameters.")
 @click.option("--db-dir", type=click.Path(file_okay=False, dir_okay=True, path_type=Path), help="Change database storage folder.")
 @click.option("--exec-name", type=str, help="Specify executable name to override (e.g. 'rgi', 'blastn').")
 @click.option("--exec-path", type=str, help="Path to the specified executable.")
