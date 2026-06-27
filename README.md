@@ -50,9 +50,16 @@ source ~/.bashrc
 ### Install External Bioinformatics Tools
 
 ```bash
+# Install all tools
 sanbac install-tools
+
+# Install a specific tool only
+sanbac install-tools prokka
+
+# Install multiple specific tools
+sanbac install-tools prokka,mashtree
 ```
-This command will dynamically resolve and download all five tools into an isolated environment (`sanbac-tools`), resolving any solver or dependency conflicts automatically. It also configures architecture compatibility libraries on ARM/aarch64 platforms.
+This command will dynamically resolve and download the specified tools (or all five tools if none are specified) into an isolated environment (`sanbac-tools`), resolving any solver or dependency conflicts automatically. It also configures architecture compatibility libraries on ARM/aarch64 platforms.
 
 ### 🚨 Ubuntu / ARM64 (aarch64) Native Installation
 If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`.
