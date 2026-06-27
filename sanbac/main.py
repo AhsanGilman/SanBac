@@ -195,11 +195,21 @@ def update_tool_cmd(repo):
         click.secho("Update process failed.", fg="red")
 
 @main.command("install-tools")
-def install_tools_cmd():
+@click.option(
+    "--tool",
+    type=str,
+    default=None,
+    help="Specify a single tool to install (e.g., 'prokka' or 'mashtree'), a comma-separated list, or 'all'. Installs all missing tools by default."
+)
+def install_tools_cmd(tool):
     """Install or update external bioinformatics tools (parsnp, mashtree) via conda."""
-    click.echo("Checking/installing external tool dependencies (parsnp, mashtree)...")
+    if tool and tool.lower() != 'all':
+        click.echo(f"Checking/installing external tool dependencies for: {tool}...")
+    else:
+        click.echo("Checking/installing external tool dependencies (diamond, prokka, rgi, parsnp, mashtree)...")
+        
     from .updater import update_external_binaries
-    success = update_external_binaries()
+    success = update_external_binaries(tool_name=tool)
     if success:
         click.secho("External tools installed successfully and are ready to use.", fg="green")
     else:

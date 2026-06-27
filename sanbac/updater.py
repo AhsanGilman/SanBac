@@ -256,7 +256,7 @@ def _verify_tool_runs(cmd_path: str) -> bool:
         return False
 
 
-def update_external_binaries() -> bool:
+def update_external_binaries(tool_name: str = None) -> bool:
     """Attempts to install/update external genomics tools in an isolated conda environment."""
     import platform
     from .tools.base import find_executable
@@ -280,6 +280,15 @@ def update_external_binaries() -> bool:
         "parsnp": "parsnp",
         "mashtree": "mashtree"
     }
+    
+    if tool_name and tool_name.lower() != 'all':
+        selected_tools = [t.strip().lower() for t in tool_name.split(',')]
+        invalid_tools = [t for t in selected_tools if t not in tool_checks]
+        if invalid_tools:
+            print(f"Error: Unrecognized tool(s): {', '.join(invalid_tools)}")
+            print(f"Available tools: {', '.join(tool_checks.keys())}")
+            return False
+        tool_checks = {k: v for k, v in tool_checks.items() if k in selected_tools}
     
     for pkg_name, cmd_name in tool_checks.items():
         exe_path = find_executable(cmd_name)
