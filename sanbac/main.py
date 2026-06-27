@@ -195,12 +195,7 @@ def update_tool_cmd(repo):
         click.secho("Update process failed.", fg="red")
 
 @main.command("install-tools")
-@click.option(
-    "--tool",
-    type=str,
-    default=None,
-    help="Specify a single tool to install (e.g., 'prokka' or 'mashtree'), a comma-separated list, or 'all'. Installs all missing tools by default."
-)
+@click.argument("tool", required=False)
 def install_tools_cmd(tool):
     """Install or update external bioinformatics tools (parsnp, mashtree) via conda."""
     if tool and tool.lower() != 'all':
