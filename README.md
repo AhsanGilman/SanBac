@@ -13,6 +13,7 @@ By default, the pipeline runs the following tools in order (skipping any tool th
 5. **Parsnp** — to perform core genome alignment and construct a phylogenetic tree (requires `--reference-parsnp`).
 6. **Mashtree** — to perform alignment-free phylogenetic tree generation based on Mash distances.
 7. **ISEScan** — to identify Insertion Sequences (IS) in genomes.
+8. **Phigaro** — to predict prophage regions in bacterial genomes.
 
 The architecture is highly extensible, allowing you to easily add new tools simply by adding a Python script.
 
