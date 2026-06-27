@@ -274,8 +274,10 @@ def update_external_binaries(tool_name: str = None) -> bool:
     # so we can verify if existing packages can run correctly
     _ensure_x86_64_compat()
 
-    # Check which tools actually need installation
-    tools_to_install = []
+    # Git-based tools (installed via git clone, not conda)
+    git_based_tools = {"plasmidfinder"}
+
+    # Conda-based tools
     tool_checks = {
         "diamond": "diamond",
         "prokka": "prokka",
@@ -286,16 +288,60 @@ def update_external_binaries(tool_name: str = None) -> bool:
         "kma": "kma",
         "blast": "blastn"
     }
-    
+
+    all_known_tools = set(tool_checks.keys()) | git_based_tools
+
     if tool_name and tool_name.lower() != 'all':
         selected_tools = [t.strip().lower() for t in tool_name.split(',')]
-        invalid_tools = [t for t in selected_tools if t not in tool_checks]
+        invalid_tools = [t for t in selected_tools if t not in all_known_tools]
         if invalid_tools:
             print(f"Error: Unrecognized tool(s): {', '.join(invalid_tools)}")
-            print(f"Available tools: {', '.join(tool_checks.keys())}")
+            print(f"Available tools: {', '.join(sorted(all_known_tools))}")
             return False
-        tool_checks = {k: v for k, v in tool_checks.items() if k in selected_tools}
-    
+    else:
+        selected_tools = None  # means all
+
+    # Handle git-based tools first
+    git_tools_to_install = []
+    if selected_tools:
+        git_tools_to_install = [t for t in selected_tools if t in git_based_tools]
+    else:
+        git_tools_to_install = list(git_based_tools)
+
+    git_success = True
+    if git_tools_to_install:
+        tools = load_tools()
+        for gt in git_tools_to_install:
+            if gt in tools:
+                tool_obj = tools[gt]
+                if tool_obj.is_installed():
+                    print(f"  {gt}: already installed")
+                else:
+                    print(f"\n--- Installing {gt} (git-based) ---")
+                    try:
+                        if tool_obj.update_db():
+                            print(f"  {gt}: installed successfully")
+                        else:
+                            print(f"  {gt}: installation failed")
+                            git_success = False
+                    except Exception as e:
+                        print(f"  {gt}: installation failed: {e}")
+                        git_success = False
+            else:
+                print(f"  {gt}: tool plugin not found")
+                git_success = False
+
+    # If only git-based tools were requested, return early
+    if selected_tools and all(t in git_based_tools for t in selected_tools):
+        return git_success
+
+    # Filter conda tool_checks based on selection
+    if selected_tools:
+        conda_selected = [t for t in selected_tools if t not in git_based_tools]
+        tool_checks = {k: v for k, v in tool_checks.items() if k in conda_selected}
+
+    # Check which conda tools actually need installation
+    tools_to_install = []
     for pkg_name, cmd_name in tool_checks.items():
         exe_path = find_executable(cmd_name)
         if exe_path is None:
@@ -313,7 +359,7 @@ def update_external_binaries(tool_name: str = None) -> bool:
 
     if not tools_to_install:
         print("All external tools are already installed and working.")
-        return True
+        return git_success
 
     # Find conda executable
     conda_path = os.environ.get("CONDA_EXE")
