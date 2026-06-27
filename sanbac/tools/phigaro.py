@@ -95,7 +95,8 @@ class PhigaroTool(BaseTool):
             # Note: If -t is not supported by phigaro, you can remove it or handle it in a wrapper. 
             # We assume -t threads works based on common bioconda CLI practices.
             # If it throws an error, the CalledProcessError will catch it.
-            run_subprocess(cmd, check=True)
+            # Pass input="Y\n" to automatically bypass interactive prompts (e.g. dropping sequences)
+            run_subprocess(cmd, check=True, input="Y\n", text=True)
             print(f"[{self.name.upper()}] Results saved with prefix: {out_prefix}")
             return output_dir
         except subprocess.CalledProcessError as e:
@@ -105,7 +106,7 @@ class PhigaroTool(BaseTool):
                 print(f"[{self.name.upper()}] Warning: threads argument not supported by Phigaro. Running without -t...")
                 cmd.remove("-t")
                 cmd.remove(str(threads))
-                run_subprocess(cmd, check=True)
+                run_subprocess(cmd, check=True, input="Y\n", text=True)
                 print(f"[{self.name.upper()}] Results saved with prefix: {out_prefix}")
                 return output_dir
             else:
