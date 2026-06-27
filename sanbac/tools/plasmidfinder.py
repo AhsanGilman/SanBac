@@ -49,6 +49,9 @@ class PlasmidfinderTool(BaseTool):
             
             print("Checking out stable version 2.1.6 (Python 3.9 compatible)...")
             run_subprocess(["git", "fetch", "--tags"], cwd=str(pf_dir), check=True)
+            # Reset any previous local patches (e.g. to pyproject.toml) to allow clean checkout
+            run_subprocess(["git", "reset", "--hard", "HEAD"], cwd=str(pf_dir), check=True)
+            run_subprocess(["git", "clean", "-fd"], cwd=str(pf_dir), check=True)
             run_subprocess(["git", "checkout", "2.1.6"], cwd=str(pf_dir), check=True)
             
             # 2. Install any loose dependencies that 2.1.6 might need
