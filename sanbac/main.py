@@ -59,7 +59,7 @@ _apply_aarch64_compat()
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
-    click.echo("SanBac 1.0.0")
+    click.echo("SanBac 1.0")
     click.echo("\nTool dependency versions:")
     click.echo("-" * 30)
     try:
