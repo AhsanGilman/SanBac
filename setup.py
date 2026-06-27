@@ -10,7 +10,7 @@ setup(
         "click>=8.0.0",
         "requests>=2.25.0",
         "packaging>=21.0",
-        "cgecore>=2.0.0",
+        "cgecore>=1.5.5",
         "tabulate>=0.7.7",
     ],
     entry_points={

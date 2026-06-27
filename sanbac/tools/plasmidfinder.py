@@ -15,10 +15,13 @@ class PlasmidfinderTool(BaseTool):
         return "PlasmidFinder: Identifies plasmids in total or partial sequenced isolates of bacteria."
 
     def _can_run_module(self) -> bool:
-        """Check if plasmidfinder is importable as a Python module."""
+        """Check if plasmidfinder script is executable."""
         try:
+            pf_script = config.db_dir / "plasmidfinder" / "plasmidfinder.py"
+            if not pf_script.exists():
+                return False
             res = run_subprocess(
-                [sys.executable, "-m", "plasmidfinder", "--version"],
+                [sys.executable, str(pf_script), "--version"],
                 capture_output=True, text=True, errors="replace", timeout=10
             )
             return res.returncode == 0
@@ -28,14 +31,10 @@ class PlasmidfinderTool(BaseTool):
     def is_installed(self) -> bool:
         pf_dir = config.db_dir / "plasmidfinder"
         db_dir = config.db_dir / "plasmidfinder_db"
-        # Check repo cloned and db cloned
         if not pf_dir.exists() or not (pf_dir / ".git").exists():
             return False
         if not db_dir.exists():
             return False
-        
-        # We assume it is installed if the directories exist.
-        # If 'python -m plasmidfinder' fails during run(), the actual error will be shown to the user.
         return True
 
     def update_db(self) -> bool:
@@ -47,24 +46,15 @@ class PlasmidfinderTool(BaseTool):
             if not pf_dir.exists():
                 print("Cloning PlasmidFinder program...")
                 run_subprocess(["git", "clone", "https://bitbucket.org/genomicepidemiology/plasmidfinder.git", str(pf_dir)], check=True)
-            else:
-                print("Updating PlasmidFinder program...")
-                run_subprocess(["git", "pull"], cwd=str(pf_dir), check=True)
             
-            # Patch pyproject.toml to allow Python 3.9 and fix cgecore requirement
-            pyproject_file = pf_dir / "pyproject.toml"
-            if pyproject_file.exists():
-                content = pyproject_file.read_text(errors="replace")
-                if 'requires-python = ">=3.10"' in content:
-                    content = content.replace('requires-python = ">=3.10"', 'requires-python = ">=3.9"')
-                if '"cgecore>=1.5.5"' in content:
-                    content = content.replace('"cgecore>=1.5.5"', '"cgecore>=2.0.0"')
-                pyproject_file.write_text(content)
+            print("Checking out stable version 2.1.6 (Python 3.9 compatible)...")
+            run_subprocess(["git", "fetch", "--tags"], cwd=str(pf_dir), check=True)
+            run_subprocess(["git", "checkout", "2.1.6"], cwd=str(pf_dir), check=True)
             
-            # 2. Install plasmidfinder as a Python package from the cloned repo
-            print("Installing PlasmidFinder Python package...")
+            # 2. Install any loose dependencies that 2.1.6 might need
+            print("Installing PlasmidFinder dependencies...")
             run_subprocess(
-                [sys.executable, "-m", "pip", "install", str(pf_dir)],
+                [sys.executable, "-m", "pip", "install", "cgecore>=1.5.5", "tabulate>=0.7.7", "biopython"],
                 check=True
             )
 
@@ -88,18 +78,19 @@ class PlasmidfinderTool(BaseTool):
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
         db_dir = config.db_dir / "plasmidfinder_db"
+        pf_script = config.db_dir / "plasmidfinder" / "plasmidfinder.py"
         
-        if not db_dir.exists():
-            print("PlasmidFinder database not found. Attempting download/build...")
+        if not db_dir.exists() or not pf_script.exists():
+            print("PlasmidFinder or database not found. Attempting download/build...")
             if not self.update_db():
-                raise RuntimeError("Could not find or build PlasmidFinder database.")
+                raise RuntimeError("Could not find or build PlasmidFinder database/program.")
                 
         output_dir.mkdir(parents=True, exist_ok=True)
         pf_out_dir = output_dir / f"{input_file.stem}_results"
         pf_out_dir.mkdir(parents=True, exist_ok=True)
         
         cmd = [
-            sys.executable, "-m", "plasmidfinder",
+            sys.executable, str(pf_script),
             "-i", str(input_file.resolve()),
             "-o", str(pf_out_dir.resolve()),
             "-p", str(db_dir.resolve()),
@@ -120,10 +111,11 @@ class PlasmidfinderTool(BaseTool):
         if not self.is_installed():
             return "Not Installed"
 
-        # 1. Try python -m plasmidfinder --version
+        # 1. Try python plasmidfinder.py --version
+        pf_script = config.db_dir / "plasmidfinder" / "plasmidfinder.py"
         try:
             res = run_subprocess(
-                [sys.executable, "-m", "plasmidfinder", "--version"],
+                [sys.executable, str(pf_script), "--version"],
                 capture_output=True, text=True, errors="replace", timeout=10
             )
             output = ((res.stdout or "") + (res.stderr or "")).strip()
