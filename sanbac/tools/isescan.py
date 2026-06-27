@@ -1,4 +1,5 @@
 import subprocess
+import shutil
 from pathlib import Path
 from .base import BaseTool, get_cmd_version, find_executable, run_subprocess
 from ..config import config
@@ -43,7 +44,18 @@ class ISEScanTool(BaseTool):
         print(f"[{self.name.upper()}] Running ISEScan on {input_file.name}...")
         try:
             run_subprocess(cmd, capture_output=True, text=True, errors="replace", check=True)
-            return sample_outdir
+            
+            # Extract the CSV file and move it to the main output_dir
+            csv_files = list(sample_outdir.rglob("*.csv"))
+            if csv_files:
+                target_csv = output_dir / f"{input_file.name}.csv"
+                shutil.move(str(csv_files[0]), str(target_csv))
+                # Clean up the rest of the output directory
+                shutil.rmtree(sample_outdir)
+                return target_csv
+            else:
+                return sample_outdir
+                
         except subprocess.CalledProcessError as e:
             print(f"[{self.name.upper()}] Error running ISEScan on {input_file.name}:")
             print(e.stderr or e.stdout)
