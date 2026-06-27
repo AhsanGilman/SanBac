@@ -6,7 +6,7 @@ from .tools import load_tools
 
 DEFAULT_REPO = "https://github.com/AhsanGilman/SanBac.git"
 
-def update_databases(tool_name: str = None) -> bool:
+def update_databases(tool_name: str = None, only_installed: bool = False) -> bool:
     """Runs the database update function for all or specific tools."""
     tools = load_tools()
     
@@ -21,6 +21,9 @@ def update_databases(tool_name: str = None) -> bool:
     print("Starting database updates...\n")
     success = True
     for name, tool in targets.items():
+        if only_installed and not tool.is_installed():
+            print(f"--- Skipping database update for tool: {name.upper()} (Not Installed) ---")
+            continue
         print(f"--- Updating database for tool: {name.upper()} ---")
         try:
             if tool.update_db():
@@ -279,7 +282,9 @@ def update_external_binaries(tool_name: str = None) -> bool:
         "rgi": "rgi",
         "parsnp": "parsnp",
         "mashtree": "mashtree",
-        "isescan": "isescan.py"
+        "isescan": "isescan.py",
+        "kma": "kma",
+        "blast": "blastn"
     }
     
     if tool_name and tool_name.lower() != 'all':
@@ -307,7 +312,7 @@ def update_external_binaries(tool_name: str = None) -> bool:
         tools_to_install.append("libxcrypt")
 
     if not tools_to_install:
-        print("All external tools (diamond, prokka, rgi, parsnp, mashtree) are already installed and working.")
+        print("All external tools are already installed and working.")
         return True
 
     # Find conda executable
@@ -477,8 +482,6 @@ def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
                 check=False
             )
             
-            # 5. Run tool environment updates / checks in a clean subprocess
-            subprocess.run([sys.executable, "-m", "sanbac.main", "install-tools"])
             return True
         except subprocess.CalledProcessError as e:
             print(f"Git pull/update failed: {e.stderr or e.stdout}")
@@ -496,7 +499,6 @@ def update_tool(repo_url: str = DEFAULT_REPO) -> bool:
         )
         print(result.stdout)
         print("SanBac has been successfully updated.")
-        subprocess.run([sys.executable, "-m", "sanbac.main", "install-tools"])
         return True
     except subprocess.CalledProcessError as e:
         print(f"Pip upgrade failed: {e.stderr or e.stdout}")

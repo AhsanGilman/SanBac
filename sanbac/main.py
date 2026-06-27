@@ -163,9 +163,10 @@ def list_tools():
     default=None,
     help="Specify a single tool database to update (e.g., 'card' or 'vfdb'). Updates all by default."
 )
-def update_db_cmd(tool):
+@click.option("--only-installed", is_flag=True, help="Only update databases for tools that are already installed.")
+def update_db_cmd(tool, only_installed):
     """Download or update databases used by the analysis tools (e.g. CARD, VFDB)."""
-    success = update_databases(tool_name=tool)
+    success = update_databases(tool_name=tool, only_installed=only_installed)
     if success:
         click.secho("\nAll database updates completed successfully.", fg="green")
     else:
@@ -179,29 +180,25 @@ def update_db_cmd(tool):
     help="Custom GitHub repository URL to pull updates from."
 )
 def update_tool_cmd(repo):
-    """Self-update the SanBac tool code to the latest version from GitHub."""
+    """Self-update the SanBac pipeline code to the latest version from GitHub."""
     kwargs = {}
     if repo:
         kwargs["repo_url"] = repo
         
     success = update_tool(**kwargs)
     if success:
-        click.secho("Update process finished.", fg="green")
-        click.echo("Updating analysis databases (CARD, VFDB) to match latest versions...")
-        import sys
-        import subprocess
-        subprocess.run([sys.executable, "-m", "sanbac.main", "update-db"])
+        click.secho("SanBac pipeline code updated successfully.", fg="green")
     else:
         click.secho("Update process failed.", fg="red")
 
 @main.command("install-tools")
 @click.argument("tool", required=False)
 def install_tools_cmd(tool):
-    """Install or update external bioinformatics tools (parsnp, mashtree) via conda."""
+    """Install external bioinformatics tools via conda (e.g. 'sanbac install-tools prokka')."""
     if tool and tool.lower() != 'all':
-        click.echo(f"Checking/installing external tool dependencies for: {tool}...")
+        click.echo(f"Installing external tool: {tool}...")
     else:
-        click.echo("Checking/installing external tool dependencies (diamond, prokka, rgi, parsnp, mashtree, isescan)...")
+        click.echo("Installing all external tool dependencies (diamond, prokka, rgi, parsnp, mashtree, isescan, kma, blast)...")
         
     from .updater import update_external_binaries
     success = update_external_binaries(tool_name=tool)

@@ -31,7 +31,7 @@ class PipelineRunner:
                 selected_tools.append("prokka")
 
             # Order tools dynamically based on preferred pipeline order
-            preferred_order = ["card", "prokka", "vfdb", "parsnp", "mashtree"]
+            preferred_order = ["card", "prokka", "vfdb", "plasmidfinder", "parsnp", "mashtree"]
             ordered = []
             for name in preferred_order:
                 if name in selected_tools and name in self.all_tools:
@@ -42,7 +42,7 @@ class PipelineRunner:
             self.tools_to_run = ordered
         else:
             # Default sequence: run all registered tools sequentially
-            preferred_order = ["card", "prokka", "vfdb", "parsnp", "mashtree"]
+            preferred_order = ["card", "prokka", "vfdb", "plasmidfinder", "parsnp", "mashtree"]
             ordered = []
             for name in preferred_order:
                 if name in self.all_tools:
