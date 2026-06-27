@@ -7,13 +7,14 @@
 
 By default, the pipeline runs the following tools in order (skipping any tool that is not installed on your system):
 1. **CARD** (Comprehensive Antibiotic Resistance Database) — via RGI (Resistance Gene Identifier) to identify antibiotic resistance genes (ARGs).
-2. **VFDB** (Virulence Factor Database) — via blastn to screen for virulence factors.
+2. **VFDB** (Virulence Factor Database) — via DIAMOND blastp to screen for virulence factors.
 3. **Prokka** — to execute rapid prokaryotic genome annotation (protein coding genes, tRNA, rRNA).
-4. **Parsnp** — to perform core genome alignment and construct a phylogenetic tree (requires `--reference-parsnp`).
-5. **Mashtree** — to perform alignment-free phylogenetic tree generation based on Mash distances.
-6. **ISEScan** — to identify Insertion Sequences (IS) in genomes.
+4. **PlasmidFinder** — to identify plasmids in total or partial sequenced isolates of bacteria.
+5. **Parsnp** — to perform core genome alignment and construct a phylogenetic tree (requires `--reference-parsnp`).
+6. **Mashtree** — to perform alignment-free phylogenetic tree generation based on Mash distances.
+7. **ISEScan** — to identify Insertion Sequences (IS) in genomes.
 
-The architecture is highly extensible, allowing you to easily add new tools (e.g. tools 4, 5, 6) simply by adding a Python script.
+The architecture is highly extensible, allowing you to easily add new tools simply by adding a Python script.
 
 ---
 
@@ -51,16 +52,17 @@ source ~/.bashrc
 ### Install External Bioinformatics Tools
 
 ```bash
-# Install all tools
+# Install all tools (conda-based + git-based like PlasmidFinder)
 sanbac install-tools
 
 # Install a specific tool only
 sanbac install-tools prokka
+sanbac install-tools plasmidfinder
 
 # Install multiple specific tools
 sanbac install-tools prokka,mashtree
 ```
-This command will dynamically resolve and download the specified tools (or all six tools if none are specified) into an isolated environment (`sanbac-tools`), resolving any solver or dependency conflicts automatically. It also configures architecture compatibility libraries on ARM/aarch64 platforms.
+This command will dynamically resolve and download the specified tools into an isolated environment, resolving any solver or dependency conflicts automatically. Git-based tools like PlasmidFinder are cloned and configured separately. It also configures architecture compatibility libraries on ARM/aarch64 platforms.
 
 ### 🚨 Ubuntu / ARM64 (aarch64) Native Installation
 If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`.
@@ -97,13 +99,18 @@ sanbac list-tools
 ```
 ### 2. Download and Update Databases
 ```bash
+# Update all databases for installed tools
 sanbac update-db
+
+# Update a specific tool's database only
+sanbac update-db --tool card
+sanbac update-db --tool plasmidfinder
 ```
-*Note: The VFDB database will be downloaded and built automatically if you try to run the pipeline without it.*
+*Note: Databases like VFDB and PlasmidFinder will be downloaded and built automatically if you try to run the pipeline without them.*
 
 ### 3. Run
 ```bash
-sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools card,vfdb,prokka
+sanbac run --input-dir /path/to/genomes --output-dir /path/to/results --threads 8 --tools card,vfdb,prokka,plasmidfinder
 ```
 ### 4. Run All Tools
 ```bash
@@ -123,9 +130,9 @@ Options:
 Commands:
   run                         Scan the input folder for FASTA files and run tools.
   list-tools                  List all registered and available tool plugins.
-  update-db                   Download or update databases used by the analysis tools.
-  update-tool                 Self-update the SanBac tool code to the latest version.
-  install-tools               Install or update external bioinformatics tools (parsnp, mashtree) via conda.
+  update-db                   Download or update databases for installed tools.
+  update-tool                 Self-update the SanBac pipeline code from GitHub.
+  install-tools               Install external bioinformatics tools via conda or git.
   config                      View or modify configuration parameters.
 
 COMMAND OPTIONS
@@ -134,7 +141,7 @@ COMMAND OPTIONS
     -i, --input-dir DIRECTORY Path to the import folder containing FNA/FASTA files. [Required]
     -o, --output-dir DIRECTORY Path to the output folder where analysis results will be saved. [Required]
     -t, --threads INTEGER     Total threads/CPU cores to allocate to the run. [Default: 4]
-    --tools TEXT              Comma-separated list of tools to run (e.g. 'card,prokka,parsnp,mashtree' or 'all'). [Required]
+    --tools TEXT              Comma-separated list of tools to run (e.g. 'card,prokka,plasmidfinder' or 'all'). [Required]
     --reference-parsnp FILE   Path to the reference FASTA/FNA file for Parsnp.
 
   config Options:
@@ -143,7 +150,8 @@ COMMAND OPTIONS
     --exec-path TEXT          Path to the specified executable.
 
   update-db Options:
-    --tool TEXT               Specify a single tool database to update (e.g., 'card' or 'vfdb').
+    --tool TEXT               Specify a single tool database to update (e.g., 'card' or 'plasmidfinder').
+    --only-installed          Only update databases for tools that are already installed.
 
   update-tool Options:
     --repo TEXT               Custom GitHub repository URL to pull updates from.
@@ -177,6 +185,12 @@ results/
 │   └── sample2/
 │       ├── sample2.gff
 │       └── sample2.faa
+├── plasmidfinder/
+│   ├── sample1_results/  # PlasmidFinder output per sample
+│   └── sample2_results/
+├── isescan/
+│   ├── sample1/          # ISEScan output per sample
+│   └── sample2/
 └── Phylogenetic tree/
     ├── parsnp/           # Parsnp outputs (grouped by phylogenetic tool)
     │   ├── parsnp.xmfa       # Core alignment
@@ -187,17 +201,18 @@ results/
 ```
 
 ### 3. Self-Updating
-To upgrade the pipeline to the latest version directly from GitHub:
+To upgrade the SanBac pipeline code to the latest version from GitHub:
 ```bash
 sanbac update-tool
 ```
 *   If running inside a git checkout, this executes `git pull`.
 *   Otherwise, it upgrades the python package using `pip`.
+*   **Note:** This command only updates the pipeline code. It does **not** install new tools or update databases. Use `sanbac install-tools` and `sanbac update-db` separately.
 ---
 
 ## Adding Custom Tools (Plugins)
 
-You can extend SanBac with features 4, 5, 6, etc. by placing a new Python file in the `sanbac/tools/` directory.
+You can extend SanBac with new tools by placing a new Python file in the `sanbac/tools/` directory.
 
 ### Example: Adding a custom tool (`sanbac/tools/my_tool.py`)
 Create a new file in `sanbac/tools/` and subclass `BaseTool`:
