@@ -87,10 +87,55 @@ class PlasmidfinderTool(BaseTool):
 
     def get_version(self) -> str:
         pf_dir = config.db_dir / "plasmidfinder"
-        if pf_dir.exists():
-            try:
-                res = run_subprocess(["git", "log", "-1", "--format=%cd", "--date=short"], cwd=str(pf_dir), capture_output=True, text=True)
-                return f"Git ({res.stdout.strip()})" if res.stdout else "Unknown"
-            except Exception:
-                pass
-        return "Not Installed"
+        pf_py = pf_dir / "plasmidfinder.py"
+        if not pf_py.exists():
+            return "Not Installed"
+
+        # 1. Try running plasmidfinder.py --version
+        try:
+            res = run_subprocess(
+                [sys.executable, str(pf_py), "--version"],
+                capture_output=True, text=True, errors="replace", timeout=10
+            )
+            output = ((res.stdout or "") + (res.stderr or "")).strip()
+            if output and "error" not in output.lower():
+                # Extract version number from output
+                for line in output.splitlines():
+                    line = line.strip()
+                    if line:
+                        return line
+        except Exception:
+            pass
+
+        # 2. Try extracting version from the script source
+        try:
+            source = pf_py.read_text(errors="replace")
+            import re
+            match = re.search(r'(?:__version__|version)\s*=\s*["\']([^"\']+)["\']', source)
+            if match:
+                return match.group(1)
+        except Exception:
+            pass
+
+        # 3. Fall back to git tag or commit date
+        try:
+            res = run_subprocess(
+                ["git", "describe", "--tags", "--always"],
+                cwd=str(pf_dir), capture_output=True, text=True, timeout=5
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout.strip()
+        except Exception:
+            pass
+
+        try:
+            res = run_subprocess(
+                ["git", "log", "-1", "--format=%cd", "--date=short"],
+                cwd=str(pf_dir), capture_output=True, text=True, timeout=5
+            )
+            if res.stdout.strip():
+                return f"Git ({res.stdout.strip()})"
+        except Exception:
+            pass
+
+        return "Unknown"
