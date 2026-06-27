@@ -14,10 +14,28 @@ class PlasmidfinderTool(BaseTool):
     def description(self) -> str:
         return "PlasmidFinder: Identifies plasmids in total or partial sequenced isolates of bacteria."
 
+    def _find_pf_script(self) -> Path:
+        """Search for plasmidfinder.py inside the cloned repo directory."""
+        pf_dir = config.db_dir / "plasmidfinder"
+        if not pf_dir.exists():
+            return None
+        # Check root first
+        candidate = pf_dir / "plasmidfinder.py"
+        if candidate.exists():
+            return candidate
+        # Search recursively (max depth 2)
+        for p in pf_dir.rglob("plasmidfinder.py"):
+            if p.is_file():
+                return p
+        return None
+
     def is_installed(self) -> bool:
         pf_dir = config.db_dir / "plasmidfinder"
-        pf_py = pf_dir / "plasmidfinder.py"
-        return pf_py.exists()
+        # Check if the repo was cloned (directory exists with .git)
+        if not pf_dir.exists() or not (pf_dir / ".git").exists():
+            return False
+        db_dir = config.db_dir / "plasmidfinder_db"
+        return db_dir.exists()
 
     def update_db(self) -> bool:
         pf_dir = config.db_dir / "plasmidfinder"
@@ -42,7 +60,6 @@ class PlasmidfinderTool(BaseTool):
                 
             # 3. Install database using kma_index
             print("Installing PlasmidFinder database...")
-            # Using kma_index, relying on run_subprocess to find it in PATH or tool bin dirs
             run_subprocess([sys.executable, "INSTALL.py", "kma_index"], cwd=str(db_dir), check=True)
             
             print("PlasmidFinder database updated successfully.")
@@ -52,10 +69,10 @@ class PlasmidfinderTool(BaseTool):
             return False
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
-        if not self.is_installed():
-            raise FileNotFoundError("PlasmidFinder program not found. Please run 'update-db' first.")
+        pf_py = self._find_pf_script()
+        if not pf_py:
+            raise FileNotFoundError("PlasmidFinder script not found. Please run 'sanbac install-tools plasmidfinder' first.")
             
-        pf_py = config.db_dir / "plasmidfinder" / "plasmidfinder.py"
         db_dir = config.db_dir / "plasmidfinder_db"
         
         if not db_dir.exists():
@@ -87,35 +104,36 @@ class PlasmidfinderTool(BaseTool):
 
     def get_version(self) -> str:
         pf_dir = config.db_dir / "plasmidfinder"
-        pf_py = pf_dir / "plasmidfinder.py"
-        if not pf_py.exists():
+        if not self.is_installed():
             return "Not Installed"
 
-        # 1. Try running plasmidfinder.py --version
-        try:
-            res = run_subprocess(
-                [sys.executable, str(pf_py), "--version"],
-                capture_output=True, text=True, errors="replace", timeout=10
-            )
-            output = ((res.stdout or "") + (res.stderr or "")).strip()
-            if output and "error" not in output.lower():
-                # Extract version number from output
-                for line in output.splitlines():
-                    line = line.strip()
-                    if line:
-                        return line
-        except Exception:
-            pass
+        pf_py = self._find_pf_script()
 
-        # 2. Try extracting version from the script source
-        try:
-            source = pf_py.read_text(errors="replace")
-            import re
-            match = re.search(r'(?:__version__|version)\s*=\s*["\']([^"\']+)["\']', source)
-            if match:
-                return match.group(1)
-        except Exception:
-            pass
+        # 1. Try running plasmidfinder.py --version (if script found)
+        if pf_py:
+            try:
+                res = run_subprocess(
+                    [sys.executable, str(pf_py), "--version"],
+                    capture_output=True, text=True, errors="replace", timeout=10
+                )
+                output = ((res.stdout or "") + (res.stderr or "")).strip()
+                if output and "error" not in output.lower():
+                    for line in output.splitlines():
+                        line = line.strip()
+                        if line:
+                            return line
+            except Exception:
+                pass
+
+            # 2. Try extracting version from the script source
+            try:
+                source = pf_py.read_text(errors="replace")
+                import re
+                match = re.search(r'(?:__version__|version)\s*=\s*["\']([^"\']+)["\']', source)
+                if match:
+                    return match.group(1)
+            except Exception:
+                pass
 
         # 3. Fall back to git tag or commit date
         try:
@@ -138,4 +156,5 @@ class PlasmidfinderTool(BaseTool):
         except Exception:
             pass
 
-        return "Unknown"
+        return "Installed"
+
