@@ -28,12 +28,15 @@ class PlasmidfinderTool(BaseTool):
     def is_installed(self) -> bool:
         pf_dir = config.db_dir / "plasmidfinder"
         db_dir = config.db_dir / "plasmidfinder_db"
-        # Check repo cloned, db cloned, and module importable
+        # Check repo cloned and db cloned
         if not pf_dir.exists() or not (pf_dir / ".git").exists():
             return False
         if not db_dir.exists():
             return False
-        return self._can_run_module()
+        
+        # We assume it is installed if the directories exist.
+        # If 'python -m plasmidfinder' fails during run(), the actual error will be shown to the user.
+        return True
 
     def update_db(self) -> bool:
         pf_dir = config.db_dir / "plasmidfinder"
@@ -82,9 +85,6 @@ class PlasmidfinderTool(BaseTool):
             return False
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
-        if not self._can_run_module():
-            raise FileNotFoundError("PlasmidFinder is not installed. Please run 'sanbac install-tools plasmidfinder' first.")
-            
         db_dir = config.db_dir / "plasmidfinder_db"
         
         if not db_dir.exists():
