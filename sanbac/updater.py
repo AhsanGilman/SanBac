@@ -278,7 +278,8 @@ def update_external_binaries(tool_name: str = None) -> bool:
         "prokka": "prokka",
         "rgi": "rgi",
         "parsnp": "parsnp",
-        "mashtree": "mashtree"
+        "mashtree": "mashtree",
+        "isescan": "isescan.py"
     }
     
     if tool_name and tool_name.lower() != 'all':

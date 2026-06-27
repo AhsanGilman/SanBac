@@ -201,7 +201,7 @@ def install_tools_cmd(tool):
     if tool and tool.lower() != 'all':
         click.echo(f"Checking/installing external tool dependencies for: {tool}...")
     else:
-        click.echo("Checking/installing external tool dependencies (diamond, prokka, rgi, parsnp, mashtree)...")
+        click.echo("Checking/installing external tool dependencies (diamond, prokka, rgi, parsnp, mashtree, isescan)...")
         
     from .updater import update_external_binaries
     success = update_external_binaries(tool_name=tool)

@@ -89,7 +89,8 @@ def find_executable(cmd_name: str) -> str:
         "rgi": "rgi",
         "prokka": "prokka",
         "parsnp": "parsnp",
-        "mashtree": "mashtree"
+        "mashtree": "mashtree",
+        "isescan.py": "isescan"
     }
     
     # 1. Primary priority: check the dedicated tool environment directory first

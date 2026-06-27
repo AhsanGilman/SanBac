@@ -11,6 +11,7 @@ By default, the pipeline runs the following tools in order (skipping any tool th
 3. **Prokka** — to execute rapid prokaryotic genome annotation (protein coding genes, tRNA, rRNA).
 4. **Parsnp** — to perform core genome alignment and construct a phylogenetic tree (requires `--reference-parsnp`).
 5. **Mashtree** — to perform alignment-free phylogenetic tree generation based on Mash distances.
+6. **ISEScan** — to identify Insertion Sequences (IS) in genomes.
 
 The architecture is highly extensible, allowing you to easily add new tools (e.g. tools 4, 5, 6) simply by adding a Python script.
 
@@ -59,7 +60,7 @@ sanbac install-tools prokka
 # Install multiple specific tools
 sanbac install-tools prokka,mashtree
 ```
-This command will dynamically resolve and download the specified tools (or all five tools if none are specified) into an isolated environment (`sanbac-tools`), resolving any solver or dependency conflicts automatically. It also configures architecture compatibility libraries on ARM/aarch64 platforms.
+This command will dynamically resolve and download the specified tools (or all six tools if none are specified) into an isolated environment (`sanbac-tools`), resolving any solver or dependency conflicts automatically. It also configures architecture compatibility libraries on ARM/aarch64 platforms.
 
 ### 🚨 Ubuntu / ARM64 (aarch64) Native Installation
 If you are running on an **ARM64 (aarch64) Linux** machine (like AWS Graviton or Apple Silicon Linux VMs), Bioconda does not provide pre-compiled packages for tools like `bamtools` or `rgi`.
