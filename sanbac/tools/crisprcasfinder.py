@@ -33,28 +33,6 @@ class CrisprcasfinderTool(BaseTool):
         # Force the conda env's bin/ to the front of PATH
         env["PATH"] = str(env_dir / "bin") + os.pathsep + env.get("PATH", "")
 
-        # Build PERL5LIB from every perl lib dir inside the conda env
-        perl_lib_dirs = []
-        for pattern in [
-            str(env_dir / "lib" / "perl5" / "site_perl" / "*"),
-            str(env_dir / "lib" / "perl5" / "site_perl"),
-            str(env_dir / "lib" / "perl5" / "*"),
-            str(env_dir / "lib" / "perl5"),
-        ]:
-            perl_lib_dirs.extend(glob.glob(pattern))
-
-        # Also add any arch-specific dirs (e.g. x86_64-linux-thread-multi)
-        for pattern in [
-            str(env_dir / "lib" / "perl5" / "site_perl" / "*" / "*"),
-            str(env_dir / "lib" / "perl5" / "*" / "*"),
-        ]:
-            for d in glob.glob(pattern):
-                if Path(d).is_dir():
-                    perl_lib_dirs.append(d)
-
-        if perl_lib_dirs:
-            env["PERL5LIB"] = os.pathsep.join(perl_lib_dirs)
-
         # LD_LIBRARY_PATH for libgomp and other shared libs
         env_lib = str(env_dir / "lib")
         existing_ld = env.get("LD_LIBRARY_PATH", "")
