@@ -118,13 +118,13 @@ Usage: sanbac [OPTIONS] COMMAND [ARGS]...
 
 Options:
   --version                   Show the version and exit.
+  -u, --update                Self-update the SanBac pipeline code from GitHub.
   --help                      Show this message and exit.
 
 Commands:
   run                         Scan the input folder for FASTA files and run tools.
   list-tools                  List all registered and available tool plugins.
   update-db                   Download or update databases for installed tools.
-  update-tool                 Self-update the SanBac pipeline code from GitHub.
   install-tools               Install external bioinformatics tools via conda or git.
   config                      View or modify configuration parameters.
 
@@ -145,9 +145,6 @@ COMMAND OPTIONS
   update-db Options:
     --tool TEXT               Specify a single tool database to update (e.g., 'card' or 'plasmidfinder').
     --only-installed          Only update databases for tools that are already installed.
-
-  update-tool Options:
-    --repo TEXT               Custom GitHub repository URL to pull updates from.
 ```
 
 ---
@@ -199,7 +196,7 @@ results/
 ### 3. Self-Updating
 To upgrade the SanBac pipeline code to the latest version from GitHub:
 ```bash
-sanbac update-tool
+sanbac -u
 ```
 *   If running inside a git checkout, this executes `git pull`.
 *   Otherwise, it upgrades the python package using `pip`.
