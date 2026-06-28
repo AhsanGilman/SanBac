@@ -79,6 +79,17 @@ def print_version(ctx, param, value):
         click.echo(f"  Error loading tools: {e}")
     ctx.exit()
 
+def run_update(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    from .updater import update_tool
+    success = update_tool()
+    if success:
+        click.secho("SanBac pipeline code updated successfully.", fg="green")
+    else:
+        click.secho("Update process failed.", fg="red")
+    ctx.exit()
+
 @click.group(context_settings=dict(max_content_width=120))
 @click.option(
     "--version",
@@ -87,6 +98,14 @@ def print_version(ctx, param, value):
     expose_value=False,
     is_eager=True,
     help="Show the version and exit."
+)
+@click.option(
+    "-u", "--update",
+    is_flag=True,
+    callback=run_update,
+    expose_value=False,
+    is_eager=True,
+    help="Self-update the SanBac pipeline code to the latest version from GitHub."
 )
 def main():
     """SanBac: A modular, multithreaded bacterial genomics analysis pipeline.
@@ -176,25 +195,6 @@ def update_db_cmd(tool, only_installed):
         click.secho("\nAll database updates completed successfully.", fg="green")
     else:
         click.secho("\nOne or more database updates failed.", fg="yellow")
-
-@main.command("update-tool", short_help="Self-update the SanBac pipeline code to the latest version from GitHub.")
-@click.option(
-    "--repo",
-    type=str,
-    default=None,
-    help="Custom GitHub repository URL to pull updates from."
-)
-def update_tool_cmd(repo):
-    """Self-update the SanBac pipeline code to the latest version from GitHub."""
-    kwargs = {}
-    if repo:
-        kwargs["repo_url"] = repo
-        
-    success = update_tool(**kwargs)
-    if success:
-        click.secho("SanBac pipeline code updated successfully.", fg="green")
-    else:
-        click.secho("Update process failed.", fg="red")
 
 @main.command("install-tools", short_help="Install external bioinformatics tools via conda (e.g. 'sanbac install-tools prokka').")
 @click.argument("tool", required=False)
