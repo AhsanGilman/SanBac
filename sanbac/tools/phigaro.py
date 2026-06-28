@@ -92,13 +92,40 @@ class PhigaroTool(BaseTool):
         ]
         
         print(f"[{self.name.upper()}] Running Phigaro on {input_file.name}...")
+        
+        def _process_output():
+            html_files = []
+            if out_prefix.is_dir():
+                html_files = list(out_prefix.rglob("*.html"))
+            else:
+                html_files = list(output_dir.rglob(f"{input_file.stem}*.html"))
+                
+            if html_files:
+                target_html = output_dir / html_files[0].name
+                # Move the first HTML file we found to the target output directory
+                if html_files[0] != target_html:
+                    shutil.move(str(html_files[0]), str(target_html))
+                    
+                # Clean up the output directory / prefix
+                if out_prefix.is_dir():
+                    shutil.rmtree(out_prefix)
+                else:
+                    for item in output_dir.glob(f"{input_file.stem}_phigaro*"):
+                        if item != target_html and item != out_prefix:
+                            if item.is_dir():
+                                shutil.rmtree(item)
+                            else:
+                                item.unlink()
+                return target_html
+            return output_dir
+            
         try:
             # Note: If -t is not supported by phigaro, you can remove it or handle it in a wrapper. 
             # We assume -t threads works based on common bioconda CLI practices.
             # If it throws an error, the CalledProcessError will catch it.
             run_subprocess(cmd, check=True)
-            print(f"[{self.name.upper()}] Results saved with prefix: {out_prefix}")
-            return output_dir
+            print(f"[{self.name.upper()}] Results saved successfully.")
+            return _process_output()
         except subprocess.CalledProcessError as e:
             # Some tools return non-zero if no hits are found, others crash.
             # Let's see if we can catch an argument error.
@@ -107,8 +134,8 @@ class PhigaroTool(BaseTool):
                 cmd.remove("-t")
                 cmd.remove(str(threads))
                 run_subprocess(cmd, check=True)
-                print(f"[{self.name.upper()}] Results saved with prefix: {out_prefix}")
-                return output_dir
+                print(f"[{self.name.upper()}] Results saved successfully.")
+                return _process_output()
             else:
                 print(f"[{self.name.upper()}] Error running Phigaro on {input_file.name}:")
                 print(e.stderr or e.stdout)

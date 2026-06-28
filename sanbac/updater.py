@@ -275,7 +275,7 @@ def update_external_binaries(tool_name: str = None) -> bool:
     _ensure_x86_64_compat()
 
     # Custom tools (installed via custom python logic in their update_db, not just conda)
-    custom_tools = {"plasmidfinder", "phigaro"}
+    custom_tools = {"plasmidfinder", "phigaro", "crisprcasfinder"}
 
     # Conda-based tools
     tool_checks = {
