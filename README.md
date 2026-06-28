@@ -14,6 +14,7 @@ By default, the pipeline runs the following tools in order (skipping any tool th
 6. **Mashtree** — to perform alignment-free phylogenetic tree generation based on Mash distances.
 7. **ISEScan** — to identify Insertion Sequences (IS) in genomes.
 8. **Phigaro** — to predict prophage regions in bacterial genomes.
+9. **CRISPRCasFinder** — to identify CRISPR arrays and Cas proteins.
 
 The architecture is highly extensible, allowing you to easily add new tools simply by adding a Python script.
 
@@ -192,6 +193,9 @@ results/
 ├── isescan/
 │   ├── sample1/          # ISEScan output per sample
 │   └── sample2/
+├── crisprcasfinder/
+│   ├── sample1_crisprcasfinder/  # CRISPRCasFinder output per sample
+│   └── sample2_crisprcasfinder/
 └── Phylogenetic tree/
     ├── parsnp/           # Parsnp outputs (grouped by phylogenetic tool)
     │   ├── parsnp.xmfa       # Core alignment
