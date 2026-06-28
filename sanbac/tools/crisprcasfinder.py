@@ -165,6 +165,19 @@ echo "==========================================="
             shutil.rmtree(tmp_run_dir, ignore_errors=True)
         tmp_run_dir.mkdir(parents=True)
         
+        # Symlink all files from the installation directory into the sandbox
+        # This satisfies CRISPRCasFinder's expectation to find its files (e.g. sel392v2.so, supplementary_files) in the current directory
+        import os
+        for item in ccf_dir.iterdir():
+            if item.name == '.git':
+                continue
+            dest = tmp_run_dir / item.name
+            if not dest.exists():
+                try:
+                    os.symlink(item, dest)
+                except Exception:
+                    pass
+        
         # Copy input file to tmp_run_dir to avoid absolute path bugs in CRISPRCasFinder
         import shutil
         tmp_input_file = tmp_run_dir / input_file.name
@@ -180,6 +193,7 @@ echo "==========================================="
             "-cas",
             "-keep",
             "-out", tmp_out_dir.name,
+            "-soFile", str(ccf_dir / "sel392v2.so"),
         ]
 
         # Build env with correct PATH, LD_LIBRARY_PATH
