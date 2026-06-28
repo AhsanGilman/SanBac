@@ -19,7 +19,7 @@ class CrisprcasfinderTool(BaseTool):
         return "CRISPRCasFinder: Identifies CRISPR arrays and Cas proteins."
 
     def _get_env_dir(self) -> Path:
-        return get_tools_env_prefix() / "crisprcasfinder"
+        return get_tools_env_prefix() / "sanbac_crisprcasfinder"
 
     def _get_ccf_dir(self) -> Path:
         return config.db_dir / "crisprcasfinder"

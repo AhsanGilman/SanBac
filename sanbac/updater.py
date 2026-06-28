@@ -37,7 +37,7 @@ def update_databases(tool_name: str = None, only_installed: bool = False) -> boo
     return success
 
 def get_tools_env_prefix() -> Path:
-    """Gets the path of the isolated conda environment for external tools."""
+    """Gets the base path where isolated conda environments for external tools should be created."""
     prefix = Path(sys.prefix)
     
     # Check if we are in a conda environment
@@ -49,12 +49,12 @@ def get_tools_env_prefix() -> Path:
     
     if in_conda:
         if prefix.parent.name == 'envs':
-            return prefix.parent / f"{prefix.name}-tool-envs"
+            return prefix.parent
         else:
-            return prefix / "envs" / "sanbac-tool-envs"
+            return prefix / "envs"
             
-    # Fallback for system python / non-conda: use user home directory to avoid permissions issues
-    return Path.home() / ".sanbac" / "envs" / "sanbac-tool-envs"
+    # Fallback for system python / non-conda: try to find standard conda envs dir
+    return Path.home() / ".conda" / "envs"
 
 
 def is_aarch64_system() -> bool:
@@ -173,7 +173,7 @@ def _apply_x86_64_ld_path():
     tools_base_dir = get_tools_env_prefix()
     if tools_base_dir.is_dir():
         for sub_dir in tools_base_dir.iterdir():
-            if sub_dir.is_dir() and (sub_dir / 'lib').is_dir():
+            if sub_dir.is_dir() and sub_dir.name.startswith("sanbac_") and (sub_dir / 'lib').is_dir():
                 paths_to_add.append(str(sub_dir / 'lib'))
 
     current_ld = os.environ.get('LD_LIBRARY_PATH', '')
@@ -200,7 +200,7 @@ def _create_conda_x86_64_activation_script():
     tools_libs = []
     if tools_base_dir.is_dir():
         for sub_dir in tools_base_dir.iterdir():
-            if sub_dir.is_dir() and (sub_dir / 'lib').is_dir():
+            if sub_dir.is_dir() and sub_dir.name.startswith("sanbac_") and (sub_dir / 'lib').is_dir():
                 tools_libs.append(str(sub_dir / 'lib'))
     tools_lib_str = ":".join(tools_libs)
     if tools_lib_str:
@@ -399,7 +399,7 @@ def update_external_binaries(tool_name: str = None) -> bool:
     tools_base.mkdir(parents=True, exist_ok=True)
     
     for tool in tools_to_install:
-        tool_env = tools_base / tool
+        tool_env = tools_base / f"sanbac_{tool}"
         
         # If the environment folder already exists, remove it first to ensure a completely clean, conflict-free slate
         import shutil

@@ -37,7 +37,7 @@ def _apply_aarch64_compat():
     tools_base_dir = get_tools_env_prefix()
     if tools_base_dir.is_dir():
         for sub_dir in tools_base_dir.iterdir():
-            if sub_dir.is_dir() and (sub_dir / 'lib').is_dir():
+            if sub_dir.is_dir() and sub_dir.name.startswith("sanbac_") and (sub_dir / 'lib').is_dir():
                 paths_to_add.append(str(sub_dir / 'lib'))
 
     current_ld = os.environ.get('LD_LIBRARY_PATH', '')

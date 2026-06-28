@@ -14,16 +14,18 @@ class PhigaroTool(BaseTool):
     def description(self) -> str:
         return "Phigaro: A scalable command-line tool for predicting phages and prophages."
 
+    def _get_env_dir(self) -> Path:
+        return get_tools_env_prefix() / "sanbac_phigaro"
+
     def _get_phigaro_bin(self) -> Path:
-        env_dir = get_tools_env_prefix() / "phigaro"
-        return env_dir / "bin" / "phigaro"
+        return self._get_env_dir() / "bin" / "phigaro"
 
     def is_installed(self) -> bool:
         phigaro_bin = self._get_phigaro_bin()
         return phigaro_bin.exists() and os.access(phigaro_bin, os.X_OK)
 
     def update_db(self) -> bool:
-        env_dir = get_tools_env_prefix() / "phigaro"
+        env_dir = get_tools_env_prefix() / "sanbac_phigaro"
         conda_path = os.environ.get("CONDA_EXE") or shutil.which("conda")
         
         if not conda_path:

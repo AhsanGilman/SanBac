@@ -104,14 +104,14 @@ def find_executable(cmd_name: str) -> str:
         in_conda = os.environ.get('CONDA_PREFIX') is not None or (prefix / 'conda-meta').is_dir() or prefix.parent.name == 'envs'
         if in_conda:
             if prefix.parent.name == 'envs':
-                tools_base = prefix.parent / f"{prefix.name}-tool-envs"
+                tools_base = prefix.parent
             else:
-                tools_base = prefix / "envs" / "sanbac-tool-envs"
+                tools_base = prefix / "envs"
         else:
-            tools_base = Path.home() / ".sanbac" / "envs" / "sanbac-tool-envs"
+            tools_base = Path.home() / ".conda" / "envs"
 
     if dedicated_env and tools_base and tools_base.is_dir():
-        dedicated_bin = tools_base / dedicated_env / "bin"
+        dedicated_bin = tools_base / f"sanbac_{dedicated_env}" / "bin"
         if dedicated_bin.is_dir():
             bin_dirs.append(dedicated_bin)
 
@@ -119,7 +119,7 @@ def find_executable(cmd_name: str) -> str:
     if tools_base and tools_base.is_dir():
         try:
             for sub_dir in sorted(tools_base.iterdir()):
-                if sub_dir.is_dir() and (sub_dir / 'bin').is_dir():
+                if sub_dir.is_dir() and sub_dir.name.startswith("sanbac_") and (sub_dir / 'bin').is_dir():
                     bin_dir_path = sub_dir / "bin"
                     if bin_dir_path not in bin_dirs:
                         bin_dirs.append(bin_dir_path)
