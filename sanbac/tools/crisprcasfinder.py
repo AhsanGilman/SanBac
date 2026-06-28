@@ -159,27 +159,45 @@ echo "==========================================="
             import shutil
             shutil.rmtree(ccf_out_dir, ignore_errors=True)
 
+        tmp_run_dir = output_dir / f".tmp_ccf_{input_file.stem}"
+        if tmp_run_dir.exists():
+            import shutil
+            shutil.rmtree(tmp_run_dir, ignore_errors=True)
+        tmp_run_dir.mkdir(parents=True)
+        
+        # Copy input file to tmp_run_dir to avoid absolute path bugs in CRISPRCasFinder
+        import shutil
+        tmp_input_file = tmp_run_dir / input_file.name
+        shutil.copy2(input_file, tmp_input_file)
+        
+        tmp_out_dir = tmp_run_dir / "result"
+
         # Build the command using the conda env's perl binary directly
         cmd = [
             str(perl_bin),
             str(ccf_script),
-            "-in", str(input_file.resolve()),
+            "-in", tmp_input_file.name,
             "-cas",
             "-keep",
-            "-out", str(ccf_out_dir.resolve()),
+            "-out", tmp_out_dir.name,
         ]
 
-        # Build env with correct PERL5LIB, PATH, LD_LIBRARY_PATH
+        # Build env with correct PATH, LD_LIBRARY_PATH
         env = self._build_env()
 
         print(f"[{self.name.upper()}] Running CRISPRCasFinder on {input_file.name}...")
         try:
-            run_subprocess(cmd, check=True, cwd=str(ccf_dir), env=env)
+            run_subprocess(cmd, check=True, cwd=str(tmp_run_dir), env=env)
+            # Move result to final destination
+            shutil.move(str(tmp_out_dir), str(ccf_out_dir))
             print(f"[{self.name.upper()}] Results saved at: {ccf_out_dir}")
             return ccf_out_dir
         except subprocess.CalledProcessError as e:
             print(f"[{self.name.upper()}] Error running CRISPRCasFinder on {input_file.name}:")
             raise e
+        finally:
+            if tmp_run_dir.exists():
+                shutil.rmtree(tmp_run_dir, ignore_errors=True)
 
     def get_version(self) -> str:
         if not self.is_installed():

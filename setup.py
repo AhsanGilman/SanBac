@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="sanbac",
-    version="1.3",
+    version="1.4",
     description="SanBac: A modular, multithreaded bacterial genomics analysis pipeline",
     author="Antigravity",
     packages=find_packages(),
