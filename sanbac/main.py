@@ -59,7 +59,12 @@ _apply_aarch64_compat()
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
-    click.echo("SanBac 1.0")
+    try:
+        from importlib.metadata import version as get_version
+        pkg_version = get_version("sanbac")
+    except Exception:
+        pkg_version = "Unknown"
+    click.echo(f"SanBac v{pkg_version}")
     click.echo("\nTool dependency versions:")
     click.echo("-" * 30)
     try:
