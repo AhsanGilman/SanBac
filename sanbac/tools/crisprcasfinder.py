@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 from .base import BaseTool, run_subprocess
+from ..updater import get_tools_env_prefix
+from ..config import config
 
 class CrisprcasfinderTool(BaseTool):
     @property
@@ -15,23 +17,27 @@ class CrisprcasfinderTool(BaseTool):
         return "CRISPRCasFinder: Identifies CRISPR arrays and Cas proteins."
 
     def is_installed(self) -> bool:
-        ccf_dir = Path.home() / "CRISPRCasFinder"
-        if not ccf_dir.exists():
+        env_dir = get_tools_env_prefix() / "crisprcasfinder"
+        ccf_dir = config.db_dir / "crisprcasfinder"
+        if not ccf_dir.exists() or not env_dir.exists():
             return False
             
         try:
             conda_path = shutil.which("conda")
             if not conda_path:
                 return False
-            res = subprocess.run([conda_path, "env", "list"], capture_output=True, text=True, check=True)
-            if "crisprcasfinder" not in res.stdout:
+            res = subprocess.run([conda_path, "run", "-p", str(env_dir), "python", "--version"], capture_output=True, text=True)
+            if res.returncode != 0:
                 return False
             return True
         except Exception:
             return False
 
     def update_db(self) -> bool:
-        script_content = """#!/bin/bash
+        env_dir = get_tools_env_prefix() / "crisprcasfinder"
+        ccf_dir = config.db_dir / "crisprcasfinder"
+        
+        script_content = f"""#!/bin/bash
 set -e
 echo "==========================================="
 echo " CRISPRCasFinder Automatic Installation"
@@ -41,32 +47,39 @@ if ! command -v conda >/dev/null 2>&1; then
     exit 1
 fi
 source "$(conda info --base)/etc/profile.d/conda.sh"
-ENV_NAME="crisprcasfinder"
-if conda env list | awk '{print $1}' | grep -qx "$ENV_NAME"; then
-    echo "Conda environment '$ENV_NAME' already exists."
-else
-    echo "Creating Conda environment '$ENV_NAME'..."
-    conda create -y -n "$ENV_NAME" python=3.10 perl
+
+ENV_DIR="{env_dir}"
+if [ -d "$ENV_DIR" ]; then
+    echo "Removing existing environment at $ENV_DIR..."
+    rm -rf "$ENV_DIR"
 fi
-conda activate "$ENV_NAME"
+
+echo "Creating Conda environment at '$ENV_DIR'..."
+conda create -y -p "$ENV_DIR" python=3.10 perl
+
+conda activate "$ENV_DIR"
 conda config --add channels conda-forge || true
 conda config --add channels bioconda || true
 conda config --set channel_priority strict
-conda install -y -c conda-forge -c bioconda perl perl-app-cpanminus perl-bioperl macsyfinder=2.1.2 vmatch emboss prodigal hmmer blast bedtools muscle mafft clustalw viennarna wget curl libgomp
+
+conda install -y -p "$ENV_DIR" -c conda-forge -c bioconda perl perl-app-cpanminus perl-bioperl macsyfinder=2.1.2 vmatch emboss prodigal hmmer blast bedtools muscle mafft clustalw viennarna wget curl libgomp
 cpanm Date::Calc File::Which XML::Simple Parallel::ForkManager || true
 macsydata install -u CASFinder==3.1.0 || true
-cd ~
-if [ ! -d CRISPRCasFinder ]; then
-    git clone https://github.com/dcouvin/CRISPRCasFinder.git
+
+CCF_DIR="{ccf_dir}"
+if [ ! -d "$CCF_DIR" ]; then
+    mkdir -p "$(dirname "$CCF_DIR")"
+    git clone https://github.com/dcouvin/CRISPRCasFinder.git "$CCF_DIR"
 fi
-cd CRISPRCasFinder
-cd $CONDA_PREFIX/lib
+
+cd "$CCF_DIR"
+cd "$ENV_DIR/lib"
 if [ ! -e libgomp.so.1 ]; then
     ln -s libgomp.so.1.0.0 libgomp.so.1 || true
 fi
-mkdir -p $CONDA_PREFIX/etc/conda/activate.d
-cat > $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh << EOF
-export LD_LIBRARY_PATH=\\$CONDA_PREFIX/lib:\\$LD_LIBRARY_PATH
+mkdir -p "$ENV_DIR/etc/conda/activate.d"
+cat > "$ENV_DIR/etc/conda/activate.d/env_vars.sh" << EOF
+export LD_LIBRARY_PATH=\\$ENV_DIR/lib:\\$LD_LIBRARY_PATH
 EOF
 """
         import tempfile
@@ -85,7 +98,8 @@ EOF
                 script_file.unlink()
 
     def run(self, input_file: Path, output_dir: Path, threads: int) -> Path:
-        ccf_dir = Path.home() / "CRISPRCasFinder"
+        env_dir = get_tools_env_prefix() / "crisprcasfinder"
+        ccf_dir = config.db_dir / "crisprcasfinder"
         ccf_script = ccf_dir / "CRISPRCasFinder.pl"
         
         if not self.is_installed() or not ccf_script.exists():
@@ -99,7 +113,7 @@ EOF
         
         bash_cmd = f"""
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate crisprcasfinder
+conda activate "{env_dir}"
 cd "{ccf_dir}"
 perl CRISPRCasFinder.pl -in "{input_file.resolve()}" -cas -keep -out "{ccf_out_dir.resolve()}"
 """
