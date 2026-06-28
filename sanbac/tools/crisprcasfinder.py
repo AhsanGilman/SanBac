@@ -153,7 +153,11 @@ echo "==========================================="
 
         output_dir.mkdir(parents=True, exist_ok=True)
         ccf_out_dir = output_dir / f"{input_file.stem}_crisprcasfinder"
-        ccf_out_dir.mkdir(parents=True, exist_ok=True)
+        
+        # CRISPRCasFinder will fail if the output directory already exists
+        if ccf_out_dir.exists():
+            import shutil
+            shutil.rmtree(ccf_out_dir, ignore_errors=True)
 
         # Build the command using the conda env's perl binary directly
         cmd = [
