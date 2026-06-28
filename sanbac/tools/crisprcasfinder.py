@@ -112,6 +112,7 @@ EOF
         ccf_out_dir.mkdir(parents=True, exist_ok=True)
         
         bash_cmd = f"""
+export PATH="{env_dir}/bin:$PATH"
 cd "{ccf_dir}"
 conda run -p "{env_dir}" perl CRISPRCasFinder.pl -in "{input_file.resolve()}" -cas -keep -out "{ccf_out_dir.resolve()}"
 """
