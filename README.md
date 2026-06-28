@@ -20,15 +20,6 @@ The architecture is highly extensible, allowing you to easily add new tools simp
 
 ---
 
-## Key Features
-
-*   ⚡ **Extensible Plugin System**: Add new tools as self-contained plugins. They are automatically discovered, configured, and run in sequence.
-*   🧵 **Smart Multithreading**: Parallelizes analysis across genomes and assigns optimal CPU threads per run, maximizing hardware utilization.
-*   🔄 **Database Manager**: Build and update local databases (like CARD or VFDB) automatically with one command.
-*   📦 **Self-Updater**: Keep the codebase up to date by pulling updates directly from GitHub.
-*   ⚙️ **Custom Configuration**: Easily change default database directories or map custom binaries using config overrides.
-
----
 
 ## Installation
 
