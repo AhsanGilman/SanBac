@@ -57,14 +57,14 @@ fi
 echo "Creating Conda environment at '$ENV_DIR'..."
 conda create -y -p "$ENV_DIR" python=3.10 perl
 
-conda activate "$ENV_DIR"
-conda config --add channels conda-forge || true
-conda config --add channels bioconda || true
-conda config --set channel_priority strict
+# Run subsequent commands using conda run to guarantee PATHs are correct
+conda run -p "$ENV_DIR" conda config --add channels conda-forge || true
+conda run -p "$ENV_DIR" conda config --add channels bioconda || true
+conda run -p "$ENV_DIR" conda config --set channel_priority strict
 
 conda install -y -p "$ENV_DIR" -c conda-forge -c bioconda perl perl-app-cpanminus perl-bioperl macsyfinder=2.1.2 vmatch emboss prodigal hmmer blast bedtools muscle mafft clustalw viennarna wget curl libgomp
-cpanm Date::Calc File::Which XML::Simple Parallel::ForkManager || true
-macsydata install -u CASFinder==3.1.0 || true
+conda run -p "$ENV_DIR" cpanm Date::Calc File::Which XML::Simple Parallel::ForkManager || true
+conda run -p "$ENV_DIR" macsydata install -u CASFinder==3.1.0 || true
 
 CCF_DIR="{ccf_dir}"
 if [ ! -d "$CCF_DIR" ]; then
@@ -112,10 +112,8 @@ EOF
         ccf_out_dir.mkdir(parents=True, exist_ok=True)
         
         bash_cmd = f"""
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "{env_dir}"
 cd "{ccf_dir}"
-perl CRISPRCasFinder.pl -in "{input_file.resolve()}" -cas -keep -out "{ccf_out_dir.resolve()}"
+conda run -p "{env_dir}" perl CRISPRCasFinder.pl -in "{input_file.resolve()}" -cas -keep -out "{ccf_out_dir.resolve()}"
 """
         
         import tempfile
