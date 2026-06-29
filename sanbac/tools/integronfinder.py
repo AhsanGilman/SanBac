@@ -93,9 +93,17 @@ if [ ! -d "$SRC_DIR" ]; then
 fi
 
 cd "$SRC_DIR"
+# Clean any local modifications from previous pip installs to allow checkout
+git reset --hard HEAD
+git clean -fdx
+
 # Fetch tags and checkout the latest stable release tag
 git fetch --tags
-LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+LATEST_TAG=$(git tag --sort=-v:refname | grep -iE '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+if [ -z "$LATEST_TAG" ]; then
+    LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+fi
+
 if [ ! -z "$LATEST_TAG" ]; then
     echo "Checking out latest release: $LATEST_TAG"
     git checkout "$LATEST_TAG"
@@ -186,7 +194,7 @@ echo "==========================================="
         if src_dir.exists() and (src_dir / ".git").exists():
             try:
                 res = subprocess.run(
-                    ["git", "describe", "--tags", "--always"],
+                    ["git", "describe", "--tags", "--abbrev=0"],
                     cwd=str(src_dir), capture_output=True, text=True, timeout=5
                 )
                 if res.returncode == 0 and res.stdout.strip():
