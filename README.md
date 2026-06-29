@@ -10,11 +10,12 @@ By default, the pipeline runs the following tools in order (skipping any tool th
 2. **VFDB** (Virulence Factor Database) — via DIAMOND blastp to screen for virulence factors.
 3. **Prokka** — to execute rapid prokaryotic genome annotation (protein coding genes, tRNA, rRNA).
 4. **PlasmidFinder** — to identify plasmids in total or partial sequenced isolates of bacteria.
-5. **Parsnp** — to perform core genome alignment and construct a phylogenetic tree (requires `--reference-parsnp`).
-6. **Mashtree** — to perform alignment-free phylogenetic tree generation based on Mash distances.
-7. **ISEScan** — to identify Insertion Sequences (IS) in genomes.
-8. **Phigaro** — to predict prophage regions in bacterial genomes.
-9. **CRISPRCasFinder** — to identify CRISPR arrays and Cas proteins.
+5. **IntegronFinder** — to identify integrons in bacterial genomes.
+6. **Parsnp** — to perform core genome alignment and construct a phylogenetic tree (requires `--reference-parsnp`).
+7. **Mashtree** — to perform alignment-free phylogenetic tree generation based on Mash distances.
+8. **ISEScan** — to identify Insertion Sequences (IS) in genomes.
+9. **Phigaro** — to predict prophage regions in bacterial genomes.
+10. **CRISPRCasFinder** — to identify CRISPR arrays and Cas proteins.
 
 The architecture is highly extensible, allowing you to easily add new tools simply by adding a Python script.
 
@@ -184,6 +185,9 @@ results/
 ├── crisprcasfinder/
 │   ├── sample1_crisprcasfinder/  # CRISPRCasFinder output per sample
 │   └── sample2_crisprcasfinder/
+├── integronfinder/
+│   ├── sample1_integronfinder/  # IntegronFinder output per sample
+│   └── sample2_integronfinder/
 └── Phylogenetic tree/
     ├── parsnp/           # Parsnp outputs (grouped by phylogenetic tool)
     │   ├── parsnp.xmfa       # Core alignment
