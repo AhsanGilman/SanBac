@@ -181,6 +181,20 @@ echo "==========================================="
         if not self.is_installed():
             return "Not Installed"
 
+        # Try to get the actual version from the GitHub repository tags
+        src_dir = self._get_src_dir()
+        if src_dir.exists() and (src_dir / ".git").exists():
+            try:
+                res = subprocess.run(
+                    ["git", "describe", "--tags", "--always"],
+                    cwd=str(src_dir), capture_output=True, text=True, timeout=5
+                )
+                if res.returncode == 0 and res.stdout.strip():
+                    return f"integron_finder {res.stdout.strip()}"
+            except Exception:
+                pass
+
+        # Fallback to binary execution if git is not available
         env_dir = self._get_env_dir()
         integron_finder_bin = env_dir / "bin" / "integron_finder"
 
