@@ -93,6 +93,14 @@ if [ ! -d "$SRC_DIR" ]; then
 fi
 
 cd "$SRC_DIR"
+# Fetch tags and checkout the latest stable release tag
+git fetch --tags
+LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+if [ ! -z "$LATEST_TAG" ]; then
+    echo "Checking out latest release: $LATEST_TAG"
+    git checkout "$LATEST_TAG"
+fi
+
 "$ENV_DIR/bin/python" -m pip install .
 
 echo "==========================================="
