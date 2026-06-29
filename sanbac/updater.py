@@ -48,10 +48,10 @@ def get_tools_env_prefix() -> Path:
     )
     
     if in_conda:
-        if prefix.parent.name == 'envs':
-            return prefix.parent
-        else:
-            return prefix / "envs"
+        # Nest tools inside the active conda environment's directory.
+        # This keeps the global conda env list clean and ensures tool envs 
+        # are automatically deleted if the main sanbac environment is removed.
+        return prefix / "isolated_tools"
             
     # Fallback for system python / non-conda: try to find standard conda envs dir
     return Path.home() / ".conda" / "envs"
