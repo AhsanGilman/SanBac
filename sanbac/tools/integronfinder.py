@@ -74,14 +74,14 @@ if [ -d "$ENV_DIR" ]; then
 fi
 
 echo "Creating Conda environment at '$ENV_DIR'..."
-conda create -y -p "$ENV_DIR" python=3.10
+conda create -y -p "$ENV_DIR" python=3.10 | grep -v '^#' || true
 
 conda config --add channels conda-forge || true
 conda config --add channels bioconda || true
 conda config --set channel_priority strict
 
 echo "Installing dependencies into '$ENV_DIR'..."
-conda install -y -p "$ENV_DIR" -c bioconda -c conda-forge pip hmmer infernal prodigal
+conda install -y -p "$ENV_DIR" -c bioconda -c conda-forge pip hmmer infernal prodigal | grep -v '^#' || true
 
 echo "Activating environment..."
 conda activate "$ENV_DIR"

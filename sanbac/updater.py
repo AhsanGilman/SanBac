@@ -427,8 +427,14 @@ def update_external_binaries(tool_name: str = None) -> bool:
         for attempt in range(2):
             try:
                 print(f"Running: {' '.join(cmd)}")
-                result = subprocess.run(cmd, check=False)
-                if result.returncode == 0:
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+                for line in process.stdout:
+                    if line.startswith("#"):
+                        continue
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
+                process.wait()
+                if process.returncode == 0:
                     success = True
                     break
                 else:

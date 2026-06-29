@@ -87,7 +87,7 @@ if [ -d "$ENV_DIR" ]; then
 fi
 
 echo "Creating Conda environment at '$ENV_DIR'..."
-conda create -y -p "$ENV_DIR" python=3.10 perl
+conda create -y -p "$ENV_DIR" python=3.10 perl | grep -v '^#' || true
 
 conda config --add channels conda-forge || true
 conda config --add channels bioconda || true
@@ -97,7 +97,7 @@ echo "Installing dependencies into '$ENV_DIR'..."
 conda install -y -p "$ENV_DIR" -c conda-forge -c bioconda \\
     perl perl-app-cpanminus perl-bioperl \\
     macsyfinder=2.1.2 vmatch emboss prodigal hmmer blast \\
-    bedtools muscle mafft clustalw viennarna wget curl libgomp
+    bedtools muscle mafft clustalw viennarna wget curl libgomp | grep -v '^#' || true
 
 echo "Activating environment for cpanm/macsydata..."
 conda activate "$ENV_DIR"
