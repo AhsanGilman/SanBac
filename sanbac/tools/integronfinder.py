@@ -93,12 +93,18 @@ if [ ! -d "$SRC_DIR" ]; then
 fi
 
 cd "$SRC_DIR"
-python -m pip install -e .
+"$ENV_DIR/bin/python" -m pip install .
 
 echo "==========================================="
 echo " Verifying integron_finder in conda env..."
 echo "==========================================="
-"$ENV_DIR/bin/integron_finder" --version
+if [ -f "$ENV_DIR/bin/integron_finder" ]; then
+    "$ENV_DIR/bin/integron_finder" --version
+else
+    echo "integron_finder binary not found. Checking bin directory:"
+    ls -la "$ENV_DIR/bin" | grep integron || true
+    exit 1
+fi
 
 echo ""
 echo "==========================================="
